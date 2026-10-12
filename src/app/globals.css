@@ -1,26 +1,456 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* --------------------------------------------------------------------------
+ * Tema de TutoresOn-Line
+ *
+ * HeroUI deriva casi todos sus tokens (hover, soft, focus…) de `--accent`
+ * con `color-mix`, así que cambiar la identidad de la plataforma es cambiar
+ * un puñado de variables aquí. Ningún componente lleva colores literales.
+ * ----------------------------------------------------------------------- */
+@layer base {
+  :root,
+  [data-theme="light"] {
+    /* Verde azulado: el color de la marca. */
+    --accent: oklch(0.55 0.1 182);
+    --accent-foreground: var(--snow);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+    --radius: 0.7rem;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Semánticos propios para los estados de una reserva. */
+    --estado-pendiente: oklch(0.72 0.15 78);
+    --estado-aceptada: oklch(0.58 0.12 155);
+    --estado-rechazada: oklch(0.58 0.19 25);
+    --estado-curso: oklch(0.6 0.16 255);
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    --accent: oklch(0.76 0.11 182);
+    --accent-foreground: var(--eclipse);
+
+    --estado-pendiente: oklch(0.8 0.14 78);
+    --estado-aceptada: oklch(0.74 0.12 155);
+    --estado-rechazada: oklch(0.71 0.17 25);
+    --estado-curso: oklch(0.75 0.13 255);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --font-sans: var(--fuente-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--fuente-display), Georgia, serif;
+
+  --color-estado-pendiente: var(--estado-pendiente);
+  --color-estado-aceptada: var(--estado-aceptada);
+  --color-estado-rechazada: var(--estado-rechazada);
+  --color-estado-curso: var(--estado-curso);
+}
+
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  /* La serif solo aparece en títulos, nunca en texto corrido de interfaz. */
+  .titulo {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Vidrio líquido
+ *
+ * HeroUI pinta cada superficie con dos variables: `--surface` (tarjetas,
+ * acordeones) y `--overlay` (modales, popovers, menús, tooltips). Volverlas
+ * translúcidas convierte toda la interfaz de una vez, sin tocar ni uno de los
+ * componentes. El desenfoque sí necesita una regla por clase, porque no es un
+ * color: van abajo, sobre las clases BEM de HeroUI.
+ *
+ * El reparto es a propósito: las capas flotantes llevan el desenfoque fuerte,
+ * las tarjetas uno leve. Cada `backdrop-filter` reserva recursos de GPU y en
+ * una lista de tutores hay decenas de tarjetas a la vez.
+ * ----------------------------------------------------------------------- */
+@layer base {
+  :root,
+  [data-theme="light"] {
+    --vidrio-desenfoque: 24px;
+    --vidrio-desenfoque-suave: 10px;
+    --vidrio-saturacion: 180%;
+
+    /* El radio de todas las piezas de cristal —isla, panel y tarjetas—. Es más
+       generoso que el `--radius` de HeroUI a propósito: los botones y campos
+       que van dentro tienen que verse más cerrados que la caja que los tiene. */
+    --vidrio-radio: 1.5rem;
+
+    --surface: color-mix(in oklab, var(--white) 72%, transparent);
+    --overlay: color-mix(in oklab, var(--white) 62%, transparent);
+
+    /* El brillo especular del borde: la línea clara de arriba es la luz que
+       recorre el canto del cristal, el aro interior le da grosor. */
+    --surface-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.85), inset 0 0 0 1px rgb(255 255 255 / 0.3),
+      0 1px 2px 0 rgb(16 24 40 / 0.04), 0 8px 24px -12px rgb(16 24 40 / 0.18);
+    --overlay-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.35),
+      0 8px 32px -8px rgb(16 24 40 / 0.2), 0 24px 48px -24px rgb(16 24 40 / 0.25);
+
+    /* La tarjeta al apuntarla: mismo canto y mismo aro, solo se despega más
+       del fondo. Cambia la sombra, nunca el tamaño: mover una tarjeta empuja
+       a las vecinas y obliga a rehacer la rejilla entera. */
+    --surface-shadow-alta:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.4),
+      0 2px 4px 0 rgb(16 24 40 / 0.05), 0 18px 36px -16px rgb(16 24 40 / 0.26);
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    --surface: color-mix(in oklab, oklch(0.28 0.008 285.89) 58%, transparent);
+    --overlay: color-mix(in oklab, oklch(0.3 0.008 285.89) 55%, transparent);
+
+    --surface-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.12), inset 0 0 0 1px rgb(255 255 255 / 0.06),
+      0 8px 24px -12px rgb(0 0 0 / 0.55);
+    --overlay-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.16), inset 0 0 0 1px rgb(255 255 255 / 0.08),
+      0 12px 40px -12px rgb(0 0 0 / 0.7);
+
+    --surface-shadow-alta:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.16), inset 0 0 0 1px rgb(255 255 255 / 0.1),
+      0 16px 34px -14px rgb(0 0 0 / 0.72);
+  }
+
+  /* Manchas de color fijas al viewport: sin nada detrás, el vidrio se ve gris. */
+  .fondo-vidrio {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        60rem 40rem at 10% -12%,
+        color-mix(in oklab, var(--accent) 26%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        52rem 34rem at 96% 2%,
+        color-mix(in oklab, var(--estado-curso) 18%, transparent),
+        transparent 66%
+      ),
+      radial-gradient(
+        46rem 40rem at 68% 108%,
+        color-mix(in oklab, var(--estado-pendiente) 16%, transparent),
+        transparent 70%
+      );
+  }
+
+  .dark .fondo-vidrio,
+  [data-theme="dark"] .fondo-vidrio {
+    background:
+      radial-gradient(
+        60rem 40rem at 10% -12%,
+        color-mix(in oklab, var(--accent) 16%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        52rem 34rem at 96% 2%,
+        color-mix(in oklab, var(--estado-curso) 14%, transparent),
+        transparent 66%
+      ),
+      radial-gradient(
+        46rem 40rem at 68% 108%,
+        color-mix(in oklab, var(--estado-pendiente) 10%, transparent),
+        transparent 70%
+      );
+  }
+
+  /* Capas flotantes: desenfoque completo. Son pocas y nunca decenas a la vez. */
+  .popover,
+  .tooltip,
+  .modal__dialog,
+  .drawer__dialog,
+  .vidrio {
+    backdrop-filter: blur(var(--vidrio-desenfoque)) saturate(var(--vidrio-saturacion));
+  }
+
+  /* Contenido: desenfoque leve, que es el que se repite muchas veces por página. */
+  .card {
+    backdrop-filter: blur(var(--vidrio-desenfoque-suave))
+      saturate(var(--vidrio-saturacion));
+  }
+
+  /* La tarjeta es la misma pieza de cristal que la barra y el panel, solo que
+     apoyada en la página en vez de flotando sobre ella: mismo canto iluminado,
+     mismo aro y la sombra un punto más corta. El radio que las iguala está al
+     final del archivo, fuera de `@layer`, porque ahí es donde puede ganarle al
+     de HeroUI. */
+
+  /* Refracción real. `paint()` (Houdini) es el único detector fiable de
+     Chromium: `@supports (backdrop-filter: url(#x))` da verdadero también en
+     Safari, que analiza la regla pero no dibuja el desplazamiento. */
+  @supports (background: paint(vidrio)) {
+    @media not (prefers-reduced-transparency: reduce) {
+      .vidrio-refractante {
+        backdrop-filter: blur(12px) saturate(var(--vidrio-saturacion)) url(#vidrio-refraccion);
+      }
+    }
+  }
+
+  /* Sin translucidez el texto sobre vidrio pierde contraste, así que cuando el
+     sistema la desactiva se vuelve a superficies opacas y sin fondo. */
+  @media (prefers-reduced-transparency: reduce) {
+    :root,
+    [data-theme="light"] {
+      --surface: var(--white);
+      --overlay: var(--white);
+    }
+
+    .dark,
+    [data-theme="dark"] {
+      --surface: oklch(0.2103 0.0059 285.89);
+      --overlay: oklch(0.2103 0.0059 285.89);
+    }
+
+    .fondo-vidrio {
+      display: none;
+    }
+
+    .card,
+    .popover,
+    .tooltip,
+    .modal__dialog,
+    .drawer__dialog,
+    .vidrio {
+      backdrop-filter: none;
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Movimiento del vidrio
+ *
+ * HeroUI ya anima lo suyo: los botones se hunden al pulsarlos y los modales
+ * entran con escala y opacidad, todo con `motion-reduce`. Aquí va solo lo que
+ * el cristal añade encima.
+ *
+ * Regla de coste: nada anima el radio del desenfoque salvo en la entrada de
+ * una capa flotante, que es un elemento y dura un cuarto de segundo. Cambiar
+ * un `blur()` obliga a la GPU a volver a rasterizar todo el fondo en cada
+ * fotograma; el resto se mueve con `opacity` y `background-position`, que se
+ * quedan en el compositor.
+ * ----------------------------------------------------------------------- */
+@layer base {
+  :root,
+  [data-theme="light"] {
+    --vidrio-entrada: cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  /* 1. El vidrio se cuaja al aparecer: el desenfoque sube desde cero en vez de
+     estar puesto de golpe. `@starting-style` da el estado del primer pintado,
+     así que no hace falta engancharse a los atributos de HeroUI. */
+  .popover,
+  .tooltip,
+  .modal__dialog,
+  .drawer__dialog {
+    transition: backdrop-filter 220ms var(--vidrio-entrada);
+
+    @starting-style {
+      backdrop-filter: blur(0) saturate(100%);
+    }
+  }
+
+  /* 2. La respuesta de la tarjeta al apuntarla está al final del archivo,
+     junto al radio y por el mismo motivo: le disputa la sombra a HeroUI. */
+
+  /* 3. Lente al desplazar: la barra no se pega a los bordes de la ventana,
+     flota como una isla de cristal (`.barra-isla`) sobre el contenido. Debajo
+     de ella va un velo con máscara que se enciende conforme la página sube: es
+     el desenfoque degradado de iOS, y existe para que lo que pasa por detrás no
+     se corte contra el filo de la ventana. Solo cambia de opacidad, así que
+     vive en el compositor y no toca el hilo principal.
+
+     Sin `scroll()` el velo se queda apagado: el vidrio de la isla ya da el
+     efecto y no hay nada que reemplazar con JavaScript. */
+  .barra-flotante::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--background) 60%, transparent),
+      transparent
+    );
+    backdrop-filter: blur(10px) saturate(var(--vidrio-saturacion));
+    mask-image: linear-gradient(to bottom, rgb(0 0 0) 58%, transparent);
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .barra-flotante::before {
+      animation: vidrio-velo linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 120px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .popover,
+    .tooltip,
+    .modal__dialog,
+    .drawer__dialog,
+    /* La tarjeta no aparece aquí: su transición también vive fuera de la
+       capa, y se apaga allí mismo. */
+
+    .barra-flotante::before {
+      animation: none;
+    }
+  }
+}
+
+@keyframes vidrio-velo {
+  to {
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Superficies flotantes de navegación
+ *
+ * La barra y el menú lateral dejaron de ser paredes pegadas al borde: son dos
+ * piezas de cristal que flotan sobre el contenido, con el mismo aro y el mismo
+ * brillo especular que los modales, porque ahora son eso mismo. Van con
+ * `--overlay` (no con `--surface`): el desenfoque fuerte es el que corresponde
+ * a una capa por la que pasa la página entera por debajo.
+ * ----------------------------------------------------------------------- */
+@layer base {
+  .barra-isla,
+  .panel-lateral {
+    background: var(--overlay);
+    box-shadow: var(--overlay-shadow);
+  }
+
+  /* El menú lateral se desplaza solo cuando no cabe; la barra de scroll se
+     queda fuera del cristal para no partir el aro del borde. */
+  .panel-lateral {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
+  }
+
+  .item-menu {
+    position: relative;
+  }
+
+  .item-menu:hover {
+    background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  }
+
+  /* El activo no es un bloque de color plano: es una gota de vidrio teñido con
+     la marca —canto iluminado arriba, aro tenue alrededor— y una barra a la
+     izquierda que hace de índice de dónde está uno. */
+  .item-menu--activo,
+  .item-menu--activo:hover {
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.22),
+      inset 0 0 0 1px color-mix(in oklab, var(--accent) 32%, transparent);
+  }
+
+  .item-menu--activo::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0.3rem;
+    height: 1.1rem;
+    width: 2px;
+    translate: 0 -50%;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* Sin translucidez el velo no tiene nada que desenfocar, así que deja de ser
+     un degradado y se vuelve una franja sólida del color de la página: la isla
+     sigue separada de los bordes, pero apoyada en una barra opaca en vez de
+     sobre el contenido que le pasa por detrás. Va aquí, después de la regla
+     que le pone el desenfoque, porque ambas viven en la misma capa. */
+  @media (prefers-reduced-transparency: reduce) {
+    .barra-flotante::before {
+      background: var(--background);
+      backdrop-filter: none;
+      mask-image: none;
+      opacity: 1;
+      animation: none;
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Lo que tiene que ganarle a HeroUI
+ *
+ * Estas reglas van fuera de `@layer base` a propósito. HeroUI declara las
+ * suyas —`border-radius: min(32px, var(--radius-3xl))` y `shadow-surface` sobre
+ * `.card`— sin capa, y una regla sin capa le gana a cualquiera que esté dentro
+ * de una, por específica que sea: la especificidad solo se compara dentro del
+ * mismo nivel de cascada. Sin capa y después del `@import`, manda el orden del
+ * archivo y estas quedan últimas.
+ * ----------------------------------------------------------------------- */
+
+/* El radio que iguala las tres piezas. El valor es intermedio a propósito: las
+   tarjetas de HeroUI venían más redondeadas que la barra y la barra más cerrada
+   que ellas; con un solo número las tres se leen como el mismo material. */
+.card,
+.barra-isla,
+.panel-lateral {
+  border-radius: var(--vidrio-radio);
+}
+
+/* La respuesta al apuntar: la tarjeta con la que se puede hacer algo se despega
+   un poco del fondo. Solo eso —ni brillos que la recorran ni saltos de
+   posición—: en una lista de resultados hay decenas a la vez, y un adorno que
+   se repite tantas veces deja de leerse como material y pasa a leerse como
+   ruido.
+
+   `:has()` es lo que separa una tarjeta accionable de una que solo informa: la
+   que no lleva enlace ni botón se queda quieta, porque un hover que no lleva a
+   ninguna parte promete algo que no existe. */
+.card {
+  transition: box-shadow 240ms var(--vidrio-entrada);
+}
+
+.card:has(a, button):hover,
+.card:has(a, button):focus-within {
+  box-shadow: var(--surface-shadow-alta);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
+
+/* Casillas y radios: un canto que se vea sobre el vidrio.
+ *
+ * HeroUI deja los campos sin borde (`--border-width-field: 0`) y los distingue
+ * solo por su fondo. Sobre una tarjeta translúcida esa diferencia casi no
+ * existe: una casilla sin marcar queda invisible y en un teléfono eso es un
+ * objetivo táctil que nadie ve. Se le devuelve el aro mientras está apagada;
+ * al encenderse manda el color de acento, que ya se distingue solo.
+ *
+ * Va sin capa por lo mismo que el radio de las tarjetas: la regla de HeroUI
+ * tampoco está en ninguna. */
+.checkbox__control,
+.radio__control {
+  border-width: 1px;
+  border-color: color-mix(in oklab, var(--foreground) 30%, transparent);
+}
+
+.checkbox[data-selected="true"] .checkbox__control,
+.checkbox[data-indeterminate="true"] .checkbox__control,
+.radio[data-selected="true"] .radio__control {
+  border-color: transparent;
 }
