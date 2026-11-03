@@ -3,8 +3,8 @@ import { EditorHorario } from "@/components/disponibilidad/editor-horario";
 import { ExcepcionesCalendario } from "@/components/disponibilidad/excepciones-calendario";
 import { ReglasAgendaFormulario } from "@/components/disponibilidad/reglas-agenda";
 import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
-import { disponibilidadRepo } from "@/features/disponibilidad";
-import { tutorActual } from "@/features/sesion/identidades";
+import { disponibilidadRealRepo as disponibilidadRepo } from "@/features/disponibilidad/real";
+import { exigirUsuario } from "@/features/auth/sesion";
 
 export const metadata: Metadata = { title: "Mi disponibilidad" };
 /**
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 
 export default async function PaginaDisponibilidad() {
-  const tutorId = await tutorActual();
+  const tutorId = (await exigirUsuario("tutor")).id;
 
   const disponibilidad = await disponibilidadRepo.obtener(tutorId);
 

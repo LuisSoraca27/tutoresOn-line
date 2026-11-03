@@ -4,10 +4,11 @@ import { Button, EmptyState } from "@heroui/react";
 import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { TarjetaTutor } from "@/components/tutores/tarjeta-tutor";
 import { IconoCorazon } from "@/components/ui/iconos";
-import { catalogosRepo } from "@/features/catalogos";
-import { favoritosRepo } from "@/features/favoritos";
-import { estudianteActual } from "@/features/sesion/identidades";
-import { tutoresRepo, type Tutor } from "@/features/tutores";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import { listarFavoritos } from "@/features/favoritos/reales";
+import { exigirUsuario } from "@/features/auth/sesion";
+import type { Tutor } from "@/features/tutores";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 
 export const metadata: Metadata = { title: "Favoritos" };
 
@@ -15,9 +16,9 @@ export const metadata: Metadata = { title: "Favoritos" };
 export const dynamic = "force-dynamic";
 
 export default async function PaginaFavoritos() {
-  const estudianteId = await estudianteActual();
+  const estudianteId = (await exigirUsuario("estudiante")).id;
 
-  const ids = await favoritosRepo.de(estudianteId);
+  const ids = await listarFavoritos();
 
   const [tutores, materias, ciudades] = await Promise.all([
     Promise.all(ids.map((id) => tutoresRepo.obtener(id))),

@@ -5,10 +5,10 @@ import { Avatar, Chip } from "@heroui/react";
 import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { AsistenteReserva } from "@/components/reservas/asistente-reserva";
 import { Estrellas } from "@/components/ui/estrellas";
-import { catalogosRepo } from "@/features/catalogos";
-import { disponibilidadRepo } from "@/features/disponibilidad";
-import { estudianteActual } from "@/features/sesion/identidades";
-import { tutoresRepo } from "@/features/tutores";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import { disponibilidadRealRepo as disponibilidadRepo } from "@/features/disponibilidad/real";
+import { exigirUsuario } from "@/features/auth/sesion";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 import { iniciales } from "@/lib/texto";
 
 export const metadata: Metadata = { title: "Reservar una sesión" };
@@ -18,7 +18,7 @@ export default async function PaginaReserva({
 }: {
   params: Promise<{ tutorId: string }>;
 }) {
-  const estudianteId = await estudianteActual();
+  const estudianteId = (await exigirUsuario("estudiante")).id;
 
   const { tutorId } = await params;
 

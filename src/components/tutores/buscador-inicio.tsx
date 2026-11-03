@@ -19,8 +19,8 @@ export function BuscadorInicio({ materias, niveles }: { materias: Materia[]; niv
   function buscar() {
     const parametros = new URLSearchParams();
     if (texto.trim()) parametros.set("q", texto.trim());
-    if (materia) parametros.set("materia", String(materia));
-    if (nivel) parametros.set("nivel", String(nivel));
+    if (materia && materia !== "todas") parametros.set("materia", String(materia));
+    if (nivel && nivel !== "todos") parametros.set("nivel", String(nivel));
 
     router.push(`/buscar?${parametros.toString()}`);
   }
@@ -37,7 +37,7 @@ export function BuscadorInicio({ materias, niveles }: { materias: Materia[]; niv
         <Label>¿Qué necesitas repasar?</Label>
         <SearchField.Group>
           <SearchField.SearchIcon />
-          <SearchField.Input placeholder="Cálculo, inglés, programación…" />
+          <SearchField.Input maxLength={200} placeholder="Cálculo, inglés, programación…" />
           <SearchField.ClearButton aria-label="Limpiar la búsqueda" />
         </SearchField.Group>
       </SearchField>
@@ -50,6 +50,7 @@ export function BuscadorInicio({ materias, niveles }: { materias: Materia[]; niv
         </Select.Trigger>
         <Select.Popover>
           <ListBox>
+            <ListBox.Item id="todas" textValue="Todas">Todas<ListBox.ItemIndicator /></ListBox.Item>
             {materias.map((item) => (
               <ListBox.Item key={item.id} id={item.id} textValue={item.nombre}>
                 {item.nombre}
@@ -68,6 +69,7 @@ export function BuscadorInicio({ materias, niveles }: { materias: Materia[]; niv
         </Select.Trigger>
         <Select.Popover>
           <ListBox>
+            <ListBox.Item id="todos" textValue="Todos">Todos<ListBox.ItemIndicator /></ListBox.Item>
             {niveles.map((item) => (
               <ListBox.Item key={item.id} id={item.id} textValue={item.nombre}>
                 {item.nombre}

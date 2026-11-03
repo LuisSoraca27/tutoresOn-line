@@ -1,6 +1,7 @@
 import { pedir } from "@/lib/http";
 import type { AsistenteRepo } from "./asistente.repo";
 import type { Mensaje, RespuestaAsistente } from "./asistente.types";
+import { tokenSesion } from "@/features/auth/sesion";
 
 /**
  * Implementación real: FastAPI recibe la consulta, llama al modelo y
@@ -8,9 +9,12 @@ import type { Mensaje, RespuestaAsistente } from "./asistente.types";
  * Por eso cambiar de una a otra no toca ni una línea de la interfaz.
  */
 export class AsistenteHttpRepo implements AsistenteRepo {
-  emparejar(consulta: string, historial: Mensaje[]) {
+  async emparejar(consulta: string, historial: Mensaje[]) {
+    const token = await tokenSesion();
     return pedir<RespuestaAsistente>("/asistente/emparejar", {
       method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
       body: { consulta, historial },
     });
   }

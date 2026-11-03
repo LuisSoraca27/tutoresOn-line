@@ -17,6 +17,7 @@ export interface Usuario {
   ciudadId?: string;
   /** Solo estudiantes: en qué nivel está estudiando. */
   nivelId?: NivelId;
+  avatarUrl?: string | null;
   creadoEn: string;
 }
 
@@ -49,30 +50,4 @@ export interface RegistroTutor {
   idiomas: string[];
 }
 
-/**
- * Lo que viaja en la cookie de sesión.
- *
- * Hoy es `id|rol` firmado por nadie, porque no hay servidor de verdad que
- * firmar. Con FastAPI será un JWT y estos mismos dos datos serán sus claims:
- * el middleware seguirá leyendo lo mismo, solo que verificando la firma.
- */
-export interface Sesion {
-  id: string;
-  rol: Exclude<Rol, "visitante">;
-}
-
 export const COOKIE_SESION = "tutores_sesion";
-
-export function serializarSesion(sesion: Sesion): string {
-  return `${sesion.id}|${sesion.rol}`;
-}
-
-export function deserializarSesion(valor: string | undefined): Sesion | null {
-  if (!valor) return null;
-
-  const [id, rol] = valor.split("|");
-  if (!id || !rol) return null;
-  if (rol !== "estudiante" && rol !== "tutor") return null;
-
-  return { id, rol };
-}

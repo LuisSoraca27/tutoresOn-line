@@ -1,13 +1,13 @@
 "use client";
 import { Button } from "@heroui/react";
-import type { ReservaVista } from "@/features/reservas/vista";
+import type { SesionLiquidable } from "@/features/ingresos/reales";
 import { celdaCsv, descargar } from "@/lib/descargas";
 
 export function DescargarIngresos({
   reservas,
   periodo,
 }: {
-  reservas: ReservaVista[];
+  reservas: SesionLiquidable[];
   periodo: string;
 }) {
   return (
@@ -22,7 +22,7 @@ export function DescargarIngresos({
             reserva.fecha,
             reserva.estudianteNombre,
             reserva.materiaNombre,
-            reserva.cierre?.duracionReal ?? reserva.duracionMinutos,
+            reserva.duracionMinutos,
             reserva.precio,
           ]),
         ];
@@ -39,20 +39,20 @@ export function DescargarIngresos({
   );
 }
 
-export function DescargarComprobante({ reserva }: { reserva: ReservaVista }) {
+export function DescargarComprobante({ reserva }: { reserva: SesionLiquidable }) {
   return (
     <Button
       variant="ghost"
       size="sm"
       onPress={() =>
         descargar(
-          `comprobante-${reserva.id}.txt`,
-          `TutoresOn-Line · Registro de sesión\nCódigo: ${reserva.id}\nFecha: ${reserva.fecha}\nHora: ${reserva.horaInicio} a ${reserva.horaFin}\nTutor: ${reserva.tutorNombre}\nEstudiante: ${reserva.estudianteNombre}\nMateria: ${reserva.materiaNombre}\nDuración: ${reserva.cierre?.duracionReal ?? reserva.duracionMinutos} minutos\nValor: ${reserva.precio} COP\n\nRegistro de tutoría finalizada. No acredita una transferencia bancaria ni constituye una factura.\n`,
+          `registro-${reserva.id}.txt`,
+          `TutoresOn-Line · Registro de sesión\nCódigo: ${reserva.id}\nFecha: ${reserva.fecha}\nHora: ${reserva.horaInicio} a ${reserva.horaFin}\nTutor: ${reserva.tutorNombre}\nEstudiante: ${reserva.estudianteNombre}\nMateria: ${reserva.materiaNombre}\nDuración: ${reserva.duracionMinutos} minutos\nValor: ${reserva.precio} COP\n\nRegistro de tutoría finalizada. No acredita un pago ni constituye una factura.\n`,
           "text/plain;charset=utf-8",
         )
       }
     >
-      Comprobante
+      Descargar registro
     </Button>
   );
 }

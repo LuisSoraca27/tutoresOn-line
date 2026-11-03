@@ -10,8 +10,8 @@ import type { FiltrosTutor, Modalidad, OrdenTutor } from "./tutor.types";
  */
 
 export const POR_PAGINA = 9;
-export const PRECIO_MINIMO = 20000;
-export const PRECIO_MAXIMO = 80000;
+export const PRECIO_MINIMO = 10000;
+export const PRECIO_MAXIMO = 500000;
 export const PASO_PRECIO = 5000;
 
 const MODALIDADES = ["virtual", "presencial", "ambas"] as const;
@@ -70,7 +70,8 @@ export function leerFiltros(parametros: ParametrosBusqueda): FiltrosTutor {
   const calificacionMin = numero(parametros.calificacion);
 
   return {
-    q: texto(parametros.q),
+    q: texto(parametros.q)?.slice(0, 200),
+    area: texto(parametros.area)?.slice(0, 100),
     materiaId: texto(parametros.materia),
     nivelId: unoDe(parametros.nivel, NIVELES) as NivelId | undefined,
     modalidad: unoDe(parametros.modalidad, MODALIDADES) as Modalidad | undefined,
@@ -94,6 +95,7 @@ export function aQuery(filtros: FiltrosTutor): string {
   const parametros = new URLSearchParams();
 
   if (filtros.q) parametros.set("q", filtros.q);
+  if (filtros.area) parametros.set("area", filtros.area);
   if (filtros.materiaId) parametros.set("materia", filtros.materiaId);
   if (filtros.nivelId) parametros.set("nivel", filtros.nivelId);
   if (filtros.modalidad && filtros.modalidad !== "ambas")
@@ -114,6 +116,7 @@ export function aQuery(filtros: FiltrosTutor): string {
 export function filtrosAplicados(filtros: FiltrosTutor): number {
   return [
     filtros.q,
+    filtros.area,
     filtros.materiaId,
     filtros.nivelId,
     filtros.modalidad && filtros.modalidad !== "ambas" ? filtros.modalidad : undefined,

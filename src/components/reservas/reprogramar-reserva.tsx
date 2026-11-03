@@ -4,12 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button } from "@heroui/react";
 import { SelectorTurno } from "./selector-turno";
-import { reprogramarReserva } from "@/features/reservas/acciones";
-import type { Reserva } from "@/features/reservas";
+import { reprogramarReserva } from "@/features/reservas/acciones-reales";
 import type { Turno } from "@/features/disponibilidad";
 import { fechaLarga } from "@/lib/formato";
 
-export function ReprogramarReserva({ reserva }: { reserva: Reserva }) {
+export function ReprogramarReserva({ reserva }: { reserva: { id: string; tutorId: string; duracionMinutos: number; inicio: string } }) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [turno, setTurno] = useState<Turno | null>(null);
@@ -62,7 +61,7 @@ export function ReprogramarReserva({ reserva }: { reserva: Reserva }) {
                 const resultado = await reprogramarReserva(
                   reserva.id,
                   turno.inicio,
-                  turno.fin,
+                  reserva.inicio,
                 );
                 if (!resultado.ok) {
                   setError(resultado.mensaje);

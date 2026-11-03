@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Card } from "@heroui/react";
 import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { TarjetaAcceso } from "@/components/layout/tarjeta-acceso";
-import { TarjetaProximaSesion } from "@/components/reservas/tarjeta-proxima-sesion";
+import { ChipEstado } from "@/components/reservas/chip-estado";
 import { TarjetaTutor } from "@/components/tutores/tarjeta-tutor";
-import { catalogosRepo } from "@/features/catalogos";
-import { reservasRepo } from "@/features/reservas";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import { misReservas } from "@/features/reservas/reales";
 import { exigirUsuario } from "@/features/auth/sesion";
-import { tutoresRepo } from "@/features/tutores";
-import { aIsoFechaHora } from "@/features/disponibilidad/calcular-turnos";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
+import { proximaReserva } from "@/features/reservas/proxima";
 
 export const metadata: Metadata = { title: "Mi panel" };
 /** Datos de una persona concreta: no se prerenderizan. */
@@ -18,7 +20,7 @@ export default async function PanelEstudiante() {
   const yo = await exigirUsuario("estudiante");
 
   const [reservas, recomendados, materias, ciudades] = await Promise.all([
-    reservasRepo.deEstudiante(yo.id),
+    misReservas(),
     tutoresRepo.destacados(3),
     catalogosRepo.materias(),
     catalogosRepo.ciudades(),
@@ -27,17 +29,7 @@ export default async function PanelEstudiante() {
   const nombreMateria = new Map(materias.map((m) => [m.id, m.nombre]));
   const nombreCiudad = new Map(ciudades.map((c) => [c.id, c.nombre]));
 
-  // La próxima es la primera que todavía no ha empezado y sigue viva.
-  const ahora = aIsoFechaHora(new Date());
-  const proxima = reservas.find(
-    (reserva) =>
-      reserva.inicio >= ahora &&
-      (reserva.estado === "pendiente" || reserva.estado === "aceptada"),
-  );
-
-  const tutorDeLaProxima = proxima
-    ? await tutoresRepo.obtener(proxima.tutorId)
-    : null;
+  const proxima = proximaReserva(reservas);
 
   return (
     <>
@@ -47,16 +39,19 @@ export default async function PanelEstudiante() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {proxima && tutorDeLaProxima ? (
-          <TarjetaProximaSesion
-            reserva={proxima}
-            tutor={tutorDeLaProxima}
-            materia={`${nombreMateria.get(proxima.materiaId) ?? proxima.materiaId} · ${proxima.duracionMinutos} min`}
-          />
+        {proxima ? (
+          <Card>
+            <Card.Header className="flex flex-row items-start justify-between gap-3">
+              <div><Card.Title className="text-base">{proxima.tutorNombre}</Card.Title><Card.Description>{proxima.materiaNombre} · {proxima.nivelNombre}</Card.Description></div>
+              <ChipEstado estado={proxima.estado} />
+            </Card.Header>
+            <Card.Content><p>{proxima.inicio.slice(0, 10)} · {proxima.inicio.slice(11, 16)} a {proxima.fin.slice(11, 16)}</p><p className="text-sm text-[var(--muted)]">Hora de Bogotá · {proxima.modalidad === "virtual" ? "Virtual" : "Presencial"}</p></Card.Content>
+            <Card.Footer><Link className="text-sm text-[var(--accent)] underline underline-offset-4" href="/estudiante/reservas">Ver mis reservas</Link></Card.Footer>
+          </Card>
         ) : (
           <TarjetaAcceso
             titulo="Sin sesiones agendadas"
-            descripcion="Cuando reserves con un tutor, la próxima sesión aparecerá aquí con el acceso a la videollamada."
+            descripcion="Cuando reserves con un tutor, la próxima sesión aparecerá aquí."
             href="/buscar"
             accion="Buscar tutor y reservar"
           />
@@ -64,14 +59,14 @@ export default async function PanelEstudiante() {
 
         <TarjetaAcceso
           titulo="Mis reservas"
-          descripcion="Próximas, pasadas y canceladas, con su estado y las acciones de cada una."
+          descripcion="Consulta tus reservas y su estado."
           href="/estudiante/reservas"
           accion={`Ver mis ${reservas.length} reservas`}
         />
       </div>
 
       <section className="pt-10">
-        <h2 className="titulo text-xl">Tutores recomendados</h2>
+        <h2 className="titulo text-xl">Tutores destacados</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Explora sus materias, tarifas y horarios para encontrar a quien necesitas.
         </p>
@@ -86,6 +81,7 @@ export default async function PanelEstudiante() {
             />
           ))}
         </div>
+        {recomendados.length === 0 ? <p className="mt-5 text-sm text-[var(--muted)]">Todavía no hay tutores publicados.</p> : null}
       </section>
     </>
   );

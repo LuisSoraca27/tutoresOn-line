@@ -1,24 +1,19 @@
 import { pedir } from "@/lib/http";
+import { tokenSesion } from "@/features/auth/sesion";
 import type { NotificacionesRepo } from "./notificaciones.repo";
 import type { Notificacion, NuevaNotificacion } from "./notificacion.types";
-
 export class NotificacionesHttpRepo implements NotificacionesRepo {
-  crear(nueva: NuevaNotificacion) {
-    return pedir<Notificacion>("/notificaciones", { method: "POST", body: nueva });
+  async crear(_nueva: NuevaNotificacion): Promise<Notificacion> { throw new Error("Las notificaciones se generan desde el servidor."); }
+  async de(_destinatarioId: string) {
+    const token = await tokenSesion();
+    return pedir<Notificacion[]>("/notificaciones", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
   }
-
-  de(destinatarioId: string) {
-    return pedir<Notificacion[]>("/notificaciones", { query: { destinatario_id: destinatarioId } });
+  async sinLeer(_destinatarioId: string) {
+    const token = await tokenSesion();
+    return pedir<number>("/notificaciones/sin-leer", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
   }
-
-  sinLeer(destinatarioId: string) {
-    return pedir<number>("/notificaciones/sin-leer", { query: { destinatario_id: destinatarioId } });
-  }
-
-  async marcarLeidas(destinatarioId: string) {
-    await pedir<void>("/notificaciones/leidas", {
-      method: "POST",
-      body: { destinatario_id: destinatarioId },
-    });
+  async marcarLeidas(_destinatarioId: string) {
+    const token = await tokenSesion();
+    await pedir<void>("/notificaciones/leidas", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
   }
 }

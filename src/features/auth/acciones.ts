@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { INICIO_POR_ROL } from "@/config/sitio";
-import { env } from "@/lib/env";
-import { authRepo } from "./index";
-import { borrarSesion, guardarSesion, usuarioActual } from "./sesion";
-import type { RegistroTutor } from "./auth.types";
+import { pedir, ErrorHttp } from "@/lib/http";
+import { borrarSesion, guardarSesion, tokenSesion, usuarioActual } from "./sesion";
+import type { RegistroTutor, Usuario } from "./auth.types";
+
+type RespuestaSesion = { usuario: Usuario; token: string };
 
 /**
  * Validación en el servidor (F1.12).
@@ -61,17 +62,15 @@ export async function iniciarSesion(
     return { ok: false, mensaje: "Revisa el correo y la contraseña." };
   }
 
-  const usuario = await authRepo.iniciarSesion(validado.data);
-
-  // Un solo mensaje para correo inexistente y clave errada: decir cuál de
-  // los dos falló le regala al atacante la mitad del trabajo.
-  if (!usuario) {
-    return { ok: false, mensaje: "Correo o contraseña incorrectos." };
+  try {
+    const resultado = await pedir<RespuestaSesion>("/auth/login", { method: "POST", body: validado.data, cache: "no-store" });
+    await guardarSesion(resultado.token);
+    const destinoSeguro = siguiente?.startsWith("/") && !siguiente.startsWith("//") && !siguiente.includes("\\") ? siguiente : undefined;
+    return { ok: true, destino: destinoSeguro || INICIO_POR_ROL[resultado.usuario.rol] };
+  } catch (error) {
+    if (error instanceof ErrorHttp && error.estado === 401) return { ok: false, mensaje: "Correo o contraseña incorrectos." };
+    return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos iniciar sesión." };
   }
-
-  await guardarSesion({ id: usuario.id, rol: usuario.rol });
-
-  return { ok: true, destino: siguiente || INICIO_POR_ROL[usuario.rol] };
 }
 
 /** Registro de estudiante (F1.2). */
@@ -88,8 +87,8 @@ export async function registrarEstudiante(
   }
 
   try {
-    const usuario = await authRepo.registrarEstudiante(validado.data);
-    await guardarSesion({ id: usuario.id, rol: usuario.rol });
+    const resultado = await pedir<RespuestaSesion>("/auth/registro/estudiante", { method: "POST", body: validado.data });
+    await guardarSesion(resultado.token);
 
     return { ok: true, destino: INICIO_POR_ROL.estudiante };
   } catch (error) {
@@ -144,8 +143,8 @@ export async function registrarTutor(
   }
 
   try {
-    const usuario = await authRepo.registrarTutor({ ...datos, ...base.data });
-    await guardarSesion({ id: usuario.id, rol: usuario.rol });
+    const resultado = await pedir<RespuestaSesion>("/auth/registro/tutor", { method: "POST", body: { ...datos, ...base.data } });
+    await guardarSesion(resultado.token);
 
     revalidatePath("/buscar");
 
@@ -178,10 +177,8 @@ export async function actualizarPerfil(datos: {
   }
 
   try {
-    await authRepo.actualizarPerfil(usuario.id, {
-      ...validado.data,
-      telefono: datos.telefono?.trim() || undefined,
-    });
+    const token = await tokenSesion();
+    await pedir<Usuario>("/auth/me", { method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: { ...validado.data, telefono: datos.telefono?.trim() || undefined } });
 
     revalidatePath("/estudiante/perfil");
     revalidatePath("/tutor/perfil");
@@ -209,58 +206,13 @@ export async function correoDisponible(valor: string): Promise<boolean> {
   const validado = correo.safeParse(valor);
   if (!validado.success) return true;
 
-  return authRepo.correoDisponible(validado.data);
+  try { return await pedir<boolean>("/auth/correo-disponible", { query: { correo: validado.data } }); } catch { return true; }
 }
 
-export async function solicitarRecuperacion(
-  valor: string,
-): Promise<{ ok: boolean; mensaje: string; tokenDemo?: string }> {
-  const validado = correo.safeParse(valor);
-  if (!validado.success)
-    return { ok: false, mensaje: "Escribe un correo electrónico válido." };
-  try {
-    const resultado = await authRepo.solicitarRecuperacion(validado.data);
-    return {
-      ok: true,
-      mensaje:
-        "Si hay una cuenta con ese correo, recibirás un enlace para cambiar la contraseña.",
-      tokenDemo: env.usarDatosSimulados ? resultado.tokenDemo : undefined,
-    };
-  } catch {
-    return {
-      ok: false,
-      mensaje: "No pudimos solicitar el enlace. Inténtalo de nuevo.",
-    };
-  }
+export async function solicitarRecuperacion(_valor: string): Promise<{ ok: boolean; mensaje: string; tokenDemo?: string }> {
+  return { ok: false, mensaje: "La recuperación de contraseña todavía no está disponible." };
 }
 
-export async function restablecerClave(
-  token: string,
-  nueva: string,
-): Promise<{ ok: boolean; mensaje: string }> {
-  const validado = clave.safeParse(nueva);
-  if (!validado.success)
-    return {
-      ok: false,
-      mensaje: validado.error.issues[0]?.message ?? "Revisa la contraseña.",
-    };
-  if (!token || token.length > 512)
-    return { ok: false, mensaje: "Solicita un enlace de recuperación válido." };
-  try {
-    await authRepo.restablecerClave(token, validado.data);
-    await borrarSesion();
-    return {
-      ok: true,
-      mensaje:
-        "Contraseña actualizada. Ya puedes entrar con tu nueva contraseña.",
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      mensaje:
-        error instanceof Error
-          ? error.message
-          : "No pudimos cambiar la contraseña.",
-    };
-  }
+export async function restablecerClave(_token: string, _nueva: string): Promise<{ ok: boolean; mensaje: string }> {
+  return { ok: false, mensaje: "La recuperación de contraseña todavía no está disponible." };
 }

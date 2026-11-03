@@ -11,7 +11,7 @@ import {
   TextField,
   useOverlayState,
 } from "@heroui/react";
-import { aceptarReserva, rechazarReserva } from "@/features/reservas/acciones";
+import { responder } from "@/features/solicitudes/acciones";
 
 /**
  * Aceptar o rechazar una solicitud (F5.5).
@@ -23,9 +23,11 @@ import { aceptarReserva, rechazarReserva } from "@/features/reservas/acciones";
 export function AccionesSolicitud({
   reservaId,
   estudiante,
+  inicio,
 }: {
   reservaId: string;
   estudiante: string;
+  inicio: string;
 }) {
   const modal = useOverlayState();
   const [motivo, setMotivo] = useState("");
@@ -35,7 +37,7 @@ export function AccionesSolicitud({
   function aceptar() {
     setError(null);
     iniciar(async () => {
-      const resultado = await aceptarReserva(reservaId);
+      const resultado = await responder(reservaId, "aceptada", inicio);
       if (!resultado.ok) setError(resultado.mensaje);
     });
   }
@@ -43,7 +45,7 @@ export function AccionesSolicitud({
   function rechazar() {
     setError(null);
     iniciar(async () => {
-      const resultado = await rechazarReserva(reservaId, motivo);
+      const resultado = await responder(reservaId, "rechazada", inicio, motivo);
       if (resultado.ok) {
         modal.close();
         setMotivo("");

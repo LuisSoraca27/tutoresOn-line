@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { EditorCobertura } from "@/components/tutor/editor-cobertura";
-import { catalogosRepo } from "@/features/catalogos";
-import { tutorActual } from "@/features/sesion/identidades";
-import { tutoresRepo } from "@/features/tutores";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import { exigirUsuario } from "@/features/auth/sesion";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 
 export const metadata: Metadata = { title: "Cobertura" };
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Cobertura" };
 export const dynamic = "force-dynamic";
 
 export default async function PaginaCobertura() {
-  const tutorId = await tutorActual();
+  const tutorId = (await exigirUsuario("tutor")).id;
 
   const [tutor, ciudades] = await Promise.all([
     tutoresRepo.obtener(tutorId),
@@ -25,7 +25,7 @@ export default async function PaginaCobertura() {
     <>
       <EncabezadoPagina
         titulo="Cobertura"
-        descripcion="Si atiendes en persona, hasta dónde te desplazas. Es lo que usa el filtro de ciudad de la búsqueda."
+        descripcion="Elige tu modalidad y, si atiendes en persona, la ciudad y la distancia que estás dispuesto a recorrer."
       />
 
       <EditorCobertura

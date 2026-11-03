@@ -103,7 +103,7 @@ export function FormularioLogin({ siguiente }: { siguiente?: string }) {
             Crear una
           </Link>
         </p>
-        <Link href="/auth/recuperar" className="rounded text-sm text-[var(--accent)] underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-[var(--focus)]">Olvidé mi contraseña</Link>
+
       </Card.Footer>
     </Card>
   );

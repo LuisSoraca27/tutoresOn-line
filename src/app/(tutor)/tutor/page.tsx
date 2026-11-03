@@ -5,12 +5,13 @@ import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { TarjetaAcceso } from "@/components/layout/tarjeta-acceso";
 import { BandejaExpress } from "@/components/express/bandeja-express";
 import { ChipEstado } from "@/components/reservas/chip-estado";
-import { catalogosRepo } from "@/features/catalogos";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
 import { aIsoFecha } from "@/features/disponibilidad/calcular-turnos";
 import { reservasRepo } from "@/features/reservas";
 import { aVista, porDia } from "@/features/reservas/vista";
-import { tutorActual } from "@/features/sesion/identidades";
+import { exigirUsuario } from "@/features/auth/sesion";
 import { tutoresRepo } from "@/features/tutores";
+import { tutoresPublicosRepo } from "@/features/tutores/publicos";
 import { calificacion, fechaLarga, precio } from "@/lib/formato";
 
 export const metadata: Metadata = { title: "Mi panel" };
@@ -19,11 +20,11 @@ export const metadata: Metadata = { title: "Mi panel" };
 export const dynamic = "force-dynamic";
 
 export default async function PanelTutor() {
-  const tutorId = await tutorActual();
+  const tutorId = (await exigirUsuario("tutor")).id;
 
   const [reservas, yo, tutores, materias, niveles] = await Promise.all([
     reservasRepo.deTutor(tutorId),
-    tutoresRepo.obtener(tutorId),
+    tutoresPublicosRepo.obtener(tutorId),
     tutoresRepo.buscar({ porPagina: 100 }).then((pagina) => pagina.items),
     catalogosRepo.materias(),
     catalogosRepo.niveles(),
@@ -98,7 +99,7 @@ export default async function PanelTutor() {
       <div className="pt-6">
         <BandejaExpress
           tutorId={tutorId}
-          disponiblePorDefecto={yo?.disponibleAhora ?? false}
+          disponiblePorDefecto={false}
           nombresMateria={Object.fromEntries(materias.map((m) => [m.id, m.nombre]))}
         />
       </div>

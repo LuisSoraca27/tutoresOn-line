@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Chip, Switch } from "@heroui/react";
 import { solicitudesParaTutor, tomarSolicitud } from "@/features/express/acciones";
-import { SEGUNDOS_SONDEO, type SolicitudExpress } from "@/features/express";
+import type { SolicitudExpress } from "@/features/express";
+import { useRealtimeExpress } from "@/features/express/usar-realtime";
 
 type Solicitud = SolicitudExpress & { estudianteNombre: string };
 
 /**
  * Tutor al instante, lado del tutor (F4.4, F4.5).
  *
- * El interruptor "disponible ahora" es local a esta pantalla: mientras esté
- * apagado no se consulta nada. Encenderlo es lo que pone al tutor en la cola,
- * igual que un repartidor que se pone en línea.
+ * El tutor recibe solicitudes mientras mantenga activa su conexión en esta pantalla.
  */
 export function BandejaExpress({
   tutorId,
@@ -29,34 +28,22 @@ export function BandejaExpress({
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tomando, iniciar] = useTransition();
+  const habilitado = useRef(disponiblePorDefecto);
+  const secuencia = useRef(0);
 
-  useEffect(() => {
-    if (!disponible) return;
-
-    let activo = true;
-
-    async function preguntar() {
-      try {
-        const nuevas = await solicitudesParaTutor(tutorId);
-        if (activo) setSolicitudes(nuevas);
-      } catch { if (activo) setError("No pudimos consultar las solicitudes. Volveremos a intentarlo automáticamente."); }
-    }
-
-    preguntar();
-    const reloj = setInterval(preguntar, SEGUNDOS_SONDEO * 1000);
-
-    return () => {
-      activo = false;
-      clearInterval(reloj);
-    };
-  }, [tutorId, disponible]);
+  async function sincronizar() {
+    const numero = ++secuencia.current;
+    try { const nuevas = await solicitudesParaTutor(tutorId); if (habilitado.current && secuencia.current === numero) { setSolicitudes(nuevas); setError(null); } }
+    catch { if (habilitado.current && secuencia.current === numero) setError("No pudimos consultar las solicitudes. Volveremos a intentarlo automáticamente."); }
+  }
+  const conectado = useRealtimeExpress(disponible, true, sincronizar);
 
   function tomar(solicitud: Solicitud) {
     setError(null);
     iniciar(async () => {
       const resultado = await tomarSolicitud(solicitud.id, tutorId);
       if (resultado.ok) {
-        router.push(`/sesion/${resultado.solicitud.reservaId}`);
+        router.push("/tutor/agenda");
       } else {
         setError(resultado.mensaje);
         setSolicitudes((previas) => previas.filter((otra) => otra.id !== solicitud.id));
@@ -74,7 +61,7 @@ export function BandejaExpress({
           </Card.Description>
         </div>
 
-        <Switch isSelected={disponible} onChange={(valor) => { setDisponible(valor); setSolicitudes([]); setError(null); }}>
+        <Switch isSelected={disponible} onChange={(valor) => { habilitado.current = valor; secuencia.current++; setDisponible(valor); setSolicitudes([]); setError(null); }}>
           <Switch.Content>
             <Switch.Control>
               <Switch.Thumb />
@@ -89,6 +76,8 @@ export function BandejaExpress({
           <p className="text-sm text-[var(--muted)]">
             Estás desconectado del modo instantáneo. Tus sesiones agendadas siguen igual.
           </p>
+        ) : !conectado ? (
+          <p className="text-sm text-[var(--muted)]">Reconectando para recibir solicitudes…</p>
         ) : solicitudes.length === 0 ? (
           <div className="flex items-center gap-2">
             <span className="size-2 animate-pulse rounded-full bg-[var(--success)]" />

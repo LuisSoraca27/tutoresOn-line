@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { sitio } from "@/config/sitio";
-import { Fondo } from "@/components/layout/fondo";
 import { FiltroVidrio } from "@/components/ui/filtro-vidrio";
 import { usuarioActual } from "@/features/auth/sesion";
 import { Proveedores } from "./proveedores";
@@ -66,7 +65,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: GUION_TEMA }}
         />
-        <Fondo />
         <FiltroVidrio />
         <Proveedores usuario={usuario}>{children}</Proveedores>
       </body>

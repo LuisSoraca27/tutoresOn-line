@@ -23,10 +23,11 @@ export function EditorHorario({
   bloquesIniciales: BloqueSemanal[];
 }) {
   const [bloques, setBloques] = useState(bloquesIniciales);
+  const [guardados, setGuardados] = useState(bloquesIniciales);
   const [aviso, setAviso] = useState<{ ok: boolean; mensaje: string } | null>(null);
   const [guardando, iniciar] = useTransition();
 
-  const cambiado = JSON.stringify(bloques) !== JSON.stringify(bloquesIniciales);
+  const cambiado = JSON.stringify(bloques) !== JSON.stringify(guardados);
 
   function agregar(dia: DiaSemana) {
     const delDia = bloques.filter((bloque) => bloque.dia === dia);
@@ -53,6 +54,10 @@ export function EditorHorario({
   function guardar() {
     iniciar(async () => {
       const resultado = await guardarBloques(tutorId, bloques);
+      if (resultado.ok && resultado.disponibilidad) {
+        setBloques(resultado.disponibilidad.bloques);
+        setGuardados(resultado.disponibilidad.bloques);
+      }
       setAviso({ ok: resultado.ok, mensaje: resultado.mensaje ?? "" });
     });
   }
@@ -75,7 +80,7 @@ export function EditorHorario({
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="flex flex-col gap-1">
+      <Card.Content className="flex flex-col gap-1" inert={guardando}>
         {DIAS.map((dia, indice) => {
           const delDia = bloques.filter((bloque) => bloque.dia === dia.id);
 
@@ -138,7 +143,7 @@ export function EditorHorario({
         </Button>
 
         {cambiado && !guardando ? (
-          <Button variant="ghost" onPress={() => setBloques(bloquesIniciales)}>
+          <Button variant="ghost" onPress={() => { setBloques(guardados); setAviso(null); }}>
             Descartar cambios
           </Button>
         ) : null}

@@ -3,12 +3,9 @@ import { Chip, EmptyState, Table, Tabs } from "@heroui/react";
 import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { ChipEstado } from "@/components/reservas/chip-estado";
 import { IconoHistorial } from "@/components/ui/iconos";
-import { catalogosRepo } from "@/features/catalogos";
-import { reservasRepo } from "@/features/reservas";
-import { aVista, type ReservaVista } from "@/features/reservas/vista";
-import { tutorActual } from "@/features/sesion/identidades";
-import { tutoresRepo } from "@/features/tutores";
-import { fechaLarga, precio } from "@/lib/formato";
+import { exigirUsuario } from "@/features/auth/sesion";
+import { consultarHistorial, type SesionHistorial } from "@/features/historial/real";
+import { precio } from "@/lib/formato";
 
 export const metadata: Metadata = { title: "Historial" };
 
@@ -16,35 +13,25 @@ export const metadata: Metadata = { title: "Historial" };
 export const dynamic = "force-dynamic";
 
 export default async function PaginaHistorial() {
-  const tutorId = await tutorActual();
+  await exigirUsuario("tutor");
+  const vistas = await consultarHistorial();
 
-  const [reservas, tutores, materias, niveles] = await Promise.all([
-    reservasRepo.deTutor(tutorId),
-    tutoresRepo.buscar({ porPagina: 100 }).then((pagina) => pagina.items),
-    catalogosRepo.materias(),
-    catalogosRepo.niveles(),
-  ]);
-
-  const vistas = aVista(reservas, { tutores, materias, niveles }).sort((a, b) =>
-    b.inicio.localeCompare(a.inicio),
-  );
-
-  const dictadas = vistas.filter((reserva) => reserva.estado === "finalizada");
+  const dictadas = vistas.filter((reserva) => reserva.estado === "finalizada" && reserva.cierre?.asistio === true);
   const noDadas = vistas.filter(
-    (reserva) => reserva.estado === "cancelada" || reserva.estado === "rechazada",
+    (reserva) => reserva.estado === "cancelada" || reserva.estado === "rechazada" || (reserva.estado === "finalizada" && reserva.cierre?.asistio === false),
   );
 
   const pestanas = [
     { id: "dictadas", etiqueta: "Dictadas", datos: dictadas, vacio: "Todavía no has cerrado ninguna sesión." },
     { id: "todas", etiqueta: "Todas", datos: vistas, vacio: "No tienes sesiones registradas." },
-    { id: "no-dadas", etiqueta: "No se dieron", datos: noDadas, vacio: "Ninguna cancelada ni rechazada." },
+    { id: "no-dadas", etiqueta: "No se dieron", datos: noDadas, vacio: "Ninguna cancelada, rechazada o sin asistencia." },
   ];
 
   return (
     <>
       <EncabezadoPagina
         titulo="Historial"
-        descripcion="Todo lo que ha pasado por tu agenda, lo más reciente primero."
+        descripcion="Tus reservas y sesiones, ordenadas por fecha, de la más reciente a la más antigua."
       />
 
       <Tabs>
@@ -74,7 +61,9 @@ export default async function PaginaHistorial() {
   );
 }
 
-function TablaHistorial({ reservas, vacio }: { reservas: ReservaVista[]; vacio: string }) {
+const fechaHistorial = new Intl.DateTimeFormat("es-CO", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+function TablaHistorial({ reservas, vacio }: { reservas: SesionHistorial[]; vacio: string }) {
   if (reservas.length === 0) {
     return (
       <EmptyState className="py-12 text-center">
@@ -102,10 +91,10 @@ function TablaHistorial({ reservas, vacio }: { reservas: ReservaVista[]; vacio: 
               <Table.Row key={reserva.id} id={reserva.id}>
                 <Table.Cell>
                   <span className="block first-letter:uppercase">
-                    {fechaLarga(`${reserva.fecha}T00:00`)}
+                    {fechaHistorial.format(new Date(`${reserva.inicio.slice(0, 10)}T12:00:00Z`))}
                   </span>
                   <span className="block text-sm text-[var(--muted)] tabular-nums">
-                    {reserva.horaInicio} a {reserva.horaFin}
+                    {reserva.inicio.slice(11, 16)} a {reserva.fin.slice(11, 16)} · Bogotá
                   </span>
                 </Table.Cell>
 
@@ -123,7 +112,8 @@ function TablaHistorial({ reservas, vacio }: { reservas: ReservaVista[]; vacio: 
                 </Table.Cell>
 
                 <Table.Cell>
-                  <ChipEstado estado={reserva.estado} />
+                  {reserva.estado === "finalizada" && reserva.cierre?.asistio === false ? <Chip color="warning" variant="soft" size="sm">Sin asistencia</Chip> : <ChipEstado estado={reserva.estado} />}
+                  {reserva.estado === "finalizada" && !reserva.cierre ? <span className="block text-xs text-[var(--muted)]">Sin registro de asistencia</span> : null}
                 </Table.Cell>
 
                 <Table.Cell className="tabular-nums whitespace-nowrap">

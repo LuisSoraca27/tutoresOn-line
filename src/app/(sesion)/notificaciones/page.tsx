@@ -100,9 +100,7 @@ export default async function PaginaNotificaciones() {
       )}
 
       <p className="pt-6 text-sm text-[var(--muted)]">
-        Cada aviso muestra los canales externos definidos en tus preferencias y
-        su estado de entrega. El estado «simulado» corresponde a la demostración
-        y no envía mensajes fuera de esta aplicación.
+        Los avisos aparecen aquí dentro de la aplicación. El envío por correo, SMS y WhatsApp todavía no está activo.
       </p>
     </div>
   );

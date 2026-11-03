@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Button, Chip, Separator } from "@heroui/react";
 import { BuscadorInicio } from "@/components/tutores/buscador-inicio";
 import { TarjetaTutor } from "@/components/tutores/tarjeta-tutor";
-import { catalogosRepo } from "@/features/catalogos";
-import { tutoresRepo } from "@/features/tutores";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 import { sitio } from "@/config/sitio";
 
 export default async function Portada() {
@@ -38,9 +38,9 @@ export default async function Portada() {
         <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
           <span>Áreas disponibles:</span>
           {areas.map((area) => (
-            <Chip key={area} size="sm" variant="soft">
-              {area}
-            </Chip>
+            <Link key={area} href={`/buscar?${new URLSearchParams({ area })}`} className="rounded-full focus-visible:outline-2 focus-visible:outline-[var(--focus)]" aria-label={`Buscar tutores del área ${area}`}>
+              <Chip size="sm" variant="soft">{area}</Chip>
+            </Link>
           ))}
         </div>
       </section>
@@ -64,12 +64,14 @@ export default async function Portada() {
           {destacados.map((tutor) => (
             <TarjetaTutor
               key={tutor.id}
+              soloPerfil
               tutor={tutor}
               materias={tutor.materias.map((m) => nombreMateria.get(m.materiaId) ?? m.materiaId)}
               ciudad={tutor.ciudadId ? nombreCiudad.get(tutor.ciudadId) : undefined}
             />
           ))}
         </div>
+        {destacados.length === 0 ? <p className="mt-7 text-sm text-[var(--muted)]">Todavía no hay tutores publicados.</p> : null}
       </section>
     </>
   );

@@ -5,11 +5,11 @@ import { ResponderResena } from "@/components/resenas/responder-resena";
 import { Estrellas } from "@/components/ui/estrellas";
 import { IconoEstrella } from "@/components/ui/iconos";
 import { ResumenReputacion } from "@/components/tutores/resumen-reputacion";
-import { combinarReputacion, CRITERIOS, resenasRepo } from "@/features/resenas";
-import { tutorActual } from "@/features/sesion/identidades";
-import { tutoresRepo } from "@/features/tutores";
+import { CRITERIOS } from "@/features/resenas";
+import { exigirUsuario } from "@/features/auth/sesion";
+import { resenasDeTutor } from "@/features/resenas/reales";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 import { fechaLarga } from "@/lib/formato";
-import { nombreEstudiante } from "@/mocks/estudiantes";
 import { iniciales } from "@/lib/texto";
 
 export const metadata: Metadata = { title: "Mis reseñas" };
@@ -18,14 +18,14 @@ export const metadata: Metadata = { title: "Mis reseñas" };
 export const dynamic = "force-dynamic";
 
 export default async function PaginaResenas() {
-  const tutorId = await tutorActual();
+  const tutorId = (await exigirUsuario("tutor")).id;
 
   const [resenas, yo] = await Promise.all([
-    resenasRepo.deTutor(tutorId),
+    resenasDeTutor(tutorId),
     tutoresRepo.obtener(tutorId),
   ]);
 
-  const reputacion = yo ? combinarReputacion(yo.reputacion, resenas) : null;
+  const reputacion = yo?.reputacion ?? null;
   const sinResponder = resenas.filter((resena) => !resena.respuestaTutor).length;
 
   return (
@@ -68,14 +68,14 @@ export default async function PaginaResenas() {
                 <article className="flex gap-3">
                   <Avatar size="sm" className="shrink-0">
                     <Avatar.Fallback>
-                      {iniciales(nombreEstudiante(resena.estudianteId))}
+                      {iniciales(resena.estudianteNombre)}
                     </Avatar.Fallback>
                   </Avatar>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-medium">
-                        {nombreEstudiante(resena.estudianteId)}
+                        {resena.estudianteNombre}
                       </span>
                       <Estrellas valor={resena.puntaje} tamano={14} mostrarValor={false} />
                       <span className="text-sm text-[var(--muted)] first-letter:uppercase">

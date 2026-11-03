@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { disponibilidadRepo } from "./index";
-import type { BloqueSemanal, Excepcion, ReglasAgenda } from "./disponibilidad.types";
+import { disponibilidadRealRepo as disponibilidadRepo } from "./real";
+import type { BloqueSemanal, Disponibilidad, Excepcion, ReglasAgenda } from "./disponibilidad.types";
 import { aMinutos } from "./calcular-turnos";
 
 /**
@@ -17,6 +17,7 @@ import { aMinutos } from "./calcular-turnos";
 export interface Resultado {
   ok: boolean;
   mensaje?: string;
+  disponibilidad?: Disponibilidad;
 }
 
 /** Un bloque tiene que empezar antes de terminar y no pisar a otro del mismo día. */
@@ -49,10 +50,11 @@ export async function guardarBloques(
   const error = validarBloques(bloques);
   if (error) return { ok: false, mensaje: error };
 
-  await disponibilidadRepo.guardarBloques(tutorId, bloques);
-  revalidatePath("/tutor/disponibilidad");
-
-  return { ok: true, mensaje: "Horario guardado." };
+  try {
+    const disponibilidad = await disponibilidadRepo.guardarBloques(tutorId, bloques);
+    revalidatePath("/tutor/disponibilidad");
+    return { ok: true, mensaje: "Horario guardado.", disponibilidad };
+  } catch (error) { return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos guardar el horario." }; }
 }
 
 export async function guardarReglas(tutorId: string, reglas: ReglasAgenda): Promise<Resultado> {
@@ -60,20 +62,22 @@ export async function guardarReglas(tutorId: string, reglas: ReglasAgenda): Prom
     return { ok: false, mensaje: "Ofrece al menos una duración de sesión." };
   }
 
-  await disponibilidadRepo.guardarReglas(tutorId, reglas);
-  revalidatePath("/tutor/disponibilidad");
-
-  return { ok: true, mensaje: "Reglas guardadas." };
+  try {
+    const disponibilidad = await disponibilidadRepo.guardarReglas(tutorId, reglas);
+    revalidatePath("/tutor/disponibilidad");
+    return { ok: true, mensaje: "Reglas guardadas.", disponibilidad };
+  } catch (error) { return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos guardar las reglas." }; }
 }
 
 export async function guardarExcepciones(
   tutorId: string,
   excepciones: Excepcion[],
 ): Promise<Resultado> {
-  await disponibilidadRepo.guardarExcepciones(tutorId, excepciones);
-  revalidatePath("/tutor/disponibilidad");
-
-  return { ok: true, mensaje: "Días bloqueados actualizados." };
+  try {
+    const disponibilidad = await disponibilidadRepo.guardarExcepciones(tutorId, excepciones);
+    revalidatePath("/tutor/disponibilidad");
+    return { ok: true, mensaje: "Días bloqueados actualizados.", disponibilidad };
+  } catch (error) { return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos guardar los días bloqueados." }; }
 }
 
 /**

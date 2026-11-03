@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { usuarioActual } from "@/features/auth/sesion";
-import { tutoresRepo } from "./index";
-import type { CambiosPerfil } from "./tutores.repo";
+import { tokenSesion, usuarioActual } from "@/features/auth/sesion";
+import { ErrorHttp, pedir } from "@/lib/http";
 import type { MateriaDictada } from "./tutor.types";
 
 export type ResultadoPerfil = { ok: true } | { ok: false; mensaje: string };
@@ -60,10 +59,16 @@ export async function guardarMaterias(
     return { ok: false, mensaje: "La tarifa mínima por hora es de $ 10.000." };
   }
 
-  await tutoresRepo.actualizar(tutorId, { materias });
-  refrescar(tutorId);
-
-  return { ok: true };
+  try {
+    const token = await tokenSesion();
+    if (!token) return { ok: false, mensaje: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    await pedir(`/tutores/${encodeURIComponent(tutorId)}/materias`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: { materias }, cache: "no-store" });
+    refrescar(tutorId);
+    revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos guardar las materias." };
+  }
 }
 
 /** Cobertura para tutorías presenciales (F5.8). */
@@ -81,18 +86,23 @@ export async function guardarCobertura(
     return { ok: false, mensaje: "Elige la ciudad donde atiendes en persona." };
   }
 
-  const cambios: CambiosPerfil = {
+  const cambios = {
     modalidad: datos.modalidad,
-    // Quien pasa a solo virtual deja de tener zona: si se quedara guardada,
-    // seguiría saliendo en los filtros por ciudad.
+    // La cobertura presencial deja de mostrarse al pasar a solo virtual.
     ciudadId: datos.modalidad === "virtual" ? null : datos.ciudadId,
     radioKm: datos.modalidad === "virtual" ? null : datos.radioKm,
   };
 
-  await tutoresRepo.actualizar(tutorId, cambios);
-  refrescar(tutorId);
-
-  return { ok: true };
+  try {
+    const token = await tokenSesion();
+    if (!token) return { ok: false, mensaje: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    await pedir(`/tutores/${encodeURIComponent(tutorId)}/cobertura`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: cambios, cache: "no-store" });
+    refrescar(tutorId);
+    revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos guardar la cobertura." };
+  }
 }
 
 /** Presentación pública (F5.12). */
@@ -121,14 +131,16 @@ export async function guardarPresentacion(
     };
   }
 
-  await tutoresRepo.actualizar(tutorId, {
-    titulo: datos.titulo.trim(),
-    bio: datos.bio.trim(),
-    idiomas: datos.idiomas,
-  });
-  refrescar(tutorId);
-
-  return { ok: true };
+  try {
+    const token = await tokenSesion();
+    if (!token) return { ok: false, mensaje: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    await pedir(`/tutores/${encodeURIComponent(tutorId)}/presentacion`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: { titulo: datos.titulo.trim(), bio: datos.bio.trim(), idiomas: datos.idiomas }, cache: "no-store" });
+    refrescar(tutorId);
+    revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos guardar tu presentación." };
+  }
 }
 
 async function esPropietario(tutorId: string) {
@@ -136,7 +148,7 @@ async function esPropietario(tutorId: string) {
   return usuario?.rol === "tutor" && usuario.id === tutorId;
 }
 
-/** En la demo se guarda como data URL; la API puede convertirla a una URL de almacenamiento. */
+/** Guarda la imagen en el perfil del tutor autenticado. */
 export async function guardarFoto(datos: FormData): Promise<ResultadoPerfil> {
   const usuario = await usuarioActual();
   if (!usuario || usuario.rol !== "tutor")
@@ -145,8 +157,11 @@ export async function guardarFoto(datos: FormData): Promise<ResultadoPerfil> {
       mensaje: "Inicia sesión como tutor para editar la foto.",
     };
   try {
+    const token = await tokenSesion();
+    if (!token) return { ok: false, mensaje: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    let avatarUrl: string | null;
     if (datos.get("quitar") === "si") {
-      await tutoresRepo.actualizar(usuario.id, { avatarUrl: null });
+      avatarUrl = null;
     } else {
       const foto = datos.get("foto");
       if (!(foto instanceof File) || foto.size === 0 || foto.size > 512000)
@@ -171,17 +186,17 @@ export async function guardarFoto(datos: FormData): Promise<ResultadoPerfil> {
           ok: false,
           mensaje: "La foto debe ser una imagen PNG, JPG o WebP válida.",
         };
-      await tutoresRepo.actualizar(usuario.id, {
-        avatarUrl: `data:${tipo};base64,${bytes.toString("base64")}`,
-      });
+      avatarUrl = `data:${tipo};base64,${bytes.toString("base64")}`;
     }
+    await pedir(`/tutores/${encodeURIComponent(usuario.id)}/foto`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: { avatarUrl }, cache: "no-store" });
     refrescar(usuario.id);
+    revalidatePath("/");
     revalidatePath("/estudiante");
     return { ok: true };
-  } catch {
+  } catch (error) {
     return {
       ok: false,
-      mensaje: "No pudimos guardar la foto. Inténtalo de nuevo.",
+      mensaje: error instanceof ErrorHttp ? error.message : "No pudimos guardar la foto. Inténtalo de nuevo.",
     };
   }
 }

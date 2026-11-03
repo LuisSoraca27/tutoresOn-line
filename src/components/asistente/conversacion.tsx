@@ -5,7 +5,7 @@ import { Alert, Avatar, Button, Card, Chip, Label, TextArea, TextField } from "@
 import { TarjetaTutor } from "@/components/tutores/tarjeta-tutor";
 import { IconoChispa } from "@/components/ui/iconos";
 import { preguntarAlAsistente, type TurnoAsistente } from "@/features/asistente/acciones";
-import type { Mensaje } from "@/features/asistente";
+import type { Mensaje } from "@/features/asistente/asistente.types";
 import type { Tutor } from "@/features/tutores";
 
 const EJEMPLOS = [
@@ -45,7 +45,8 @@ export function Conversacion() {
 
   function preguntar(texto: string) {
     const consulta = texto.trim();
-    if (!consulta) return;
+    if (!consulta || pensando) return;
+    if (consulta.length > 1500) { setError("La consulta puede tener hasta 1500 caracteres."); return; }
 
     setError(null);
     setEntrada("");
@@ -57,7 +58,9 @@ export function Conversacion() {
 
     iniciar(async () => {
       try {
-        const turno: TurnoAsistente = await preguntarAlAsistente(consulta, historial);
+        const resultado = await preguntarAlAsistente(consulta, historial);
+        if (!resultado.ok) { setError(resultado.mensaje); setEntrada(consulta); return; }
+        const turno: TurnoAsistente = resultado.turno;
 
         setTurnos((previos) => [
           ...previos,

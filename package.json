@@ -7,7 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs && npm run test --workspace @tutores-online/backend",
+    "backend:dev": "npm run dev --workspace @tutores-online/backend",
+    "backend:start": "npm run start --workspace @tutores-online/backend",
+    "db:generate": "npm run db:generate --workspace @tutores-online/backend",
+    "db:migrate": "npm run db:migrate --workspace @tutores-online/backend --",
+    "db:seed": "npm run db:seed --workspace @tutores-online/backend",
+    "db:studio": "npm run db:studio --workspace @tutores-online/backend",
+    "db:setup": "npm run db:setup --workspace @tutores-online/backend",
+    "db:seed:demo": "npm run db:seed:demo --workspace @tutores-online/backend"
   },
   "dependencies": {
     "@heroui/react": "^3.2.4",
@@ -27,5 +35,9 @@
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "type": "module",
+  "workspaces": [
+    "backend"
+  ]
 }

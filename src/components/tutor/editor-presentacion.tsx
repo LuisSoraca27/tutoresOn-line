@@ -40,20 +40,22 @@ export function EditorPresentacion({
   const [titulo, setTitulo] = useState(tituloInicial);
   const [bio, setBio] = useState(bioInicial);
   const [idiomas, setIdiomas] = useState(idiomasIniciales);
+  const [guardado, setGuardado] = useState({ titulo: tituloInicial, bio: bioInicial, idiomas: idiomasIniciales });
   const [aviso, setAviso] = useState<{ ok: boolean; mensaje: string } | null>(null);
   const [guardando, iniciar] = useTransition();
 
   const cambiado =
-    titulo !== tituloInicial ||
-    bio !== bioInicial ||
-    JSON.stringify(idiomas) !== JSON.stringify(idiomasIniciales);
+    titulo !== guardado.titulo ||
+    bio !== guardado.bio ||
+    JSON.stringify(idiomas) !== JSON.stringify(guardado.idiomas);
 
   const faltan = MINIMO_BIO - bio.trim().length;
-  const disponibles = SUGERENCIAS.filter((idioma) => !idiomas.includes(idioma));
+  const disponibles = SUGERENCIAS.filter((idioma) => !idiomas.some((existente) => existente.toLocaleLowerCase("es") === idioma.toLocaleLowerCase("es")));
 
   function guardar() {
     iniciar(async () => {
       const resultado = await guardarPresentacion(tutorId, { titulo, bio, idiomas });
+      if (resultado.ok) setGuardado({ titulo, bio, idiomas });
       setAviso(
         resultado.ok
           ? { ok: true, mensaje: "Perfil actualizado." }
@@ -71,7 +73,7 @@ export function EditorPresentacion({
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="flex flex-col gap-5">
+      <Card.Content className="flex flex-col gap-5" inert={guardando}>
         <TextField value={titulo} onChange={setTitulo} isRequired>
           <Label>Título o profesión</Label>
           <Input placeholder="Matemática, MSc. en Estadística" />

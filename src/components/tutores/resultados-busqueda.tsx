@@ -3,10 +3,11 @@ import { Button, EmptyState } from "@heroui/react";
 import { PaginacionResultados } from "@/components/tutores/paginacion-resultados";
 import { TarjetaTutor } from "@/components/tutores/tarjeta-tutor";
 import { IconoBuscar } from "@/components/ui/iconos";
-import { catalogosRepo } from "@/features/catalogos";
-import { favoritosRepo } from "@/features/favoritos";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import { listarFavoritos } from "@/features/favoritos/reales";
 import { usuarioActual } from "@/features/auth/sesion";
-import { tutoresRepo, type FiltrosTutor } from "@/features/tutores";
+import type { FiltrosTutor } from "@/features/tutores";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 
 /**
  * Trae y dibuja los resultados. Es un componente de servidor propio para
@@ -24,7 +25,7 @@ export async function ResultadosBusqueda({ filtros }: { filtros: FiltrosTutor })
     tutoresRepo.buscar(filtros),
     catalogosRepo.materias(),
     catalogosRepo.ciudades(),
-    estudianteId ? favoritosRepo.de(estudianteId) : Promise.resolve([]),
+    estudianteId ? listarFavoritos() : Promise.resolve([]),
   ]);
 
   const guardados = new Set(favoritos);
@@ -47,6 +48,7 @@ export async function ResultadosBusqueda({ filtros }: { filtros: FiltrosTutor })
         {pagina.items.map((tutor) => (
           <TarjetaTutor
             key={tutor.id}
+            soloPerfil
             tutor={tutor}
             materias={tutor.materias.map((m) => nombreMateria.get(m.materiaId) ?? m.materiaId)}
             ciudad={tutor.ciudadId ? nombreCiudad.get(tutor.ciudadId) : undefined}

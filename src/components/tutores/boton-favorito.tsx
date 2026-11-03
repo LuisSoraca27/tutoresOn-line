@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { Button } from "@heroui/react";
 import { IconoCorazon } from "@/components/ui/iconos";
 import { alternarFavorito } from "@/features/favoritos/acciones";
@@ -25,18 +25,22 @@ export function BotonFavorito({
   guardadoInicial: boolean;
 }) {
   const [guardado, marcar] = useOptimistic(guardadoInicial);
-  const [, iniciar] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [pendiente, iniciar] = useTransition();
 
   return (
-    <Button
+    <><Button
       variant="ghost"
       size="sm"
       isIconOnly
+      isDisabled={pendiente}
       aria-label={guardado ? `Quitar a ${nombre} de favoritos` : `Guardar a ${nombre} en favoritos`}
       onPress={() =>
         iniciar(async () => {
+          setError(null);
           marcar(!guardado);
-          await alternarFavorito(estudianteId, tutorId);
+          const resultado = await alternarFavorito(estudianteId, tutorId, !guardado);
+          if (!resultado.ok) setError(resultado.mensaje);
         })
       }
     >
@@ -44,6 +48,6 @@ export function BotonFavorito({
         className={guardado ? "text-[var(--danger)]" : "text-[var(--muted)]"}
         fill={guardado ? "currentColor" : "none"}
       />
-    </Button>
+    </Button>{error ? <span role="alert" className="text-xs text-[var(--danger)]">{error}</span> : null}</>
   );
 }

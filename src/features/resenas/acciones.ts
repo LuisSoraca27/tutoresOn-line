@@ -1,7 +1,10 @@
 "use server";
 
+import { env } from "@/lib/env";
+import { NotificacionesMockRepo } from "@/features/notificaciones/notificaciones.mock";
+const notificacionesSimuladas = new NotificacionesMockRepo();
+
 import { revalidatePath } from "next/cache";
-import { notificacionesRepo } from "@/features/notificaciones";
 import { reservasRepo } from "@/features/reservas";
 import { nombreEstudiante } from "@/mocks/estudiantes";
 import { resenasRepo } from "./index";
@@ -54,7 +57,7 @@ export async function publicarResena(datos: {
       criterios: datos.criterios,
     });
 
-    await notificacionesRepo.crear({
+    if (env.usarDatosSimulados) await notificacionesSimuladas.crear({
       destinatarioId: reserva.tutorId,
       tipo: "resena-nueva",
       titulo: `${nombreEstudiante(reserva.estudianteId)} te calificó`,
@@ -85,7 +88,7 @@ export async function responderResena(id: string, texto: string): Promise<Result
   try {
     const resena = await resenasRepo.responder(id, texto.trim());
 
-    await notificacionesRepo.crear({
+    if (env.usarDatosSimulados) await notificacionesSimuladas.crear({
       destinatarioId: resena.estudianteId,
       tipo: "resena-respondida",
       titulo: "Tu tutor respondió a tu reseña",

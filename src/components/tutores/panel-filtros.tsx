@@ -168,7 +168,7 @@ function ContenidoFiltros({
 
       <RadioGroup
         value={filtros.modalidad ?? "ambas"}
-        onChange={(valor) => cambiar({ modalidad: valor as Modalidad })}
+        onChange={(valor) => cambiar({ modalidad: valor as Modalidad, ciudadId: valor === "presencial" ? filtros.ciudadId : undefined })}
       >
         <Label>Modalidad</Label>
         {(["ambas", "virtual", "presencial"] as const).map((opcion) => (

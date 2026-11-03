@@ -43,6 +43,7 @@ export interface Tutor {
 /** Criterios de búsqueda de la regla de negocio 2. */
 export interface FiltrosTutor {
   q?: string;
+  area?: string;
   materiaId?: string;
   nivelId?: NivelId;
   modalidad?: Modalidad;

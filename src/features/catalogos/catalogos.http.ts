@@ -5,14 +5,14 @@ import type { CatalogosRepo } from "./catalogos.repo";
 /** Implementación contra FastAPI. Se activa apagando NEXT_PUBLIC_DATOS_SIMULADOS. */
 export class CatalogosHttpRepo implements CatalogosRepo {
   materias() {
-    return pedir<Materia[]>("/catalogos/materias");
+    return pedir<Materia[]>("/catalogos/materias", { cache: "no-store" });
   }
 
   niveles() {
-    return pedir<Nivel[]>("/catalogos/niveles");
+    return pedir<Nivel[]>("/catalogos/niveles", { cache: "no-store" });
   }
 
   ciudades() {
-    return pedir<Ciudad[]>("/catalogos/ciudades");
+    return pedir<Ciudad[]>("/catalogos/ciudades", { cache: "no-store" });
   }
 }

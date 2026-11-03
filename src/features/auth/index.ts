@@ -12,7 +12,6 @@ export type {
   Credenciales,
   RegistroEstudiante,
   RegistroTutor,
-  Sesion,
   Usuario,
 } from "./auth.types";
-export { COOKIE_SESION, deserializarSesion, serializarSesion } from "./auth.types";
+export { COOKIE_SESION } from "./auth.types";

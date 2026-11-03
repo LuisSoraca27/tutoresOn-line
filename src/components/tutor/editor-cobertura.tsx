@@ -43,23 +43,28 @@ export function EditorCobertura({
   const [modalidad, setModalidad] = useState<Modalidad>(modalidadInicial);
   const [ciudadId, setCiudadId] = useState(ciudadInicial);
   const [radioKm, setRadioKm] = useState(radioInicial ?? RADIO_POR_DEFECTO);
+  const [guardada, setGuardada] = useState({ modalidad: modalidadInicial, ciudadId: ciudadInicial, radioKm: radioInicial });
   const [aviso, setAviso] = useState<{ ok: boolean; mensaje: string } | null>(null);
   const [guardando, iniciar] = useTransition();
 
   const presencial = modalidad !== "virtual";
 
   const cambiado =
-    modalidad !== modalidadInicial ||
-    ciudadId !== ciudadInicial ||
-    (presencial && radioKm !== (radioInicial ?? RADIO_POR_DEFECTO));
+    modalidad !== guardada.modalidad ||
+    (presencial && (ciudadId !== guardada.ciudadId || radioKm !== (guardada.radioKm ?? RADIO_POR_DEFECTO)));
 
   function guardar() {
     iniciar(async () => {
       const resultado = await guardarCobertura(tutorId, {
         modalidad,
-        ciudadId,
+        ciudadId: presencial ? ciudadId : null,
         radioKm: presencial ? radioKm : null,
       });
+
+      if (resultado.ok) {
+        setGuardada({ modalidad, ciudadId: presencial ? ciudadId : null, radioKm: presencial ? radioKm : null });
+        if (!presencial) setCiudadId(null);
+      }
 
       setAviso(
         resultado.ok
@@ -78,7 +83,7 @@ export function EditorCobertura({
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="flex flex-col gap-6">
+      <Card.Content className="flex flex-col gap-6" inert={guardando}>
         <RadioGroup value={modalidad} onChange={(valor) => setModalidad(valor as Modalidad)}>
           <Label>Modalidad</Label>
           <Radio value="virtual">
@@ -129,7 +134,7 @@ export function EditorCobertura({
                   ))}
                 </ListBox>
               </Select.Popover>
-              <Description>Desde aquí se mide cuánto te desplazas.</Description>
+              <Description>La ciudad se usa en la búsqueda. El radio se muestra en tu perfil.</Description>
             </Select>
 
             <Slider
@@ -153,8 +158,7 @@ export function EditorCobertura({
           <Alert status="default">
             <Alert.Content>
               <Alert.Description>
-                Al ser solo virtual desapareces del filtro por ciudad, pero apareces para
-                estudiantes de todo el país.
+                Al ser solo virtual puedes aparecer en búsquedas de cualquier ciudad.
               </Alert.Description>
             </Alert.Content>
           </Alert>

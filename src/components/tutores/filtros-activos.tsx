@@ -36,6 +36,10 @@ export function FiltrosActivos({
     etiquetas.push({ id: "q", texto: `“${filtros.q}”`, limpiar: { q: undefined } });
   }
 
+  if (filtros.area) {
+    etiquetas.push({ id: "area", texto: filtros.area, limpiar: { area: undefined } });
+  }
+
   if (filtros.materiaId) {
     const materia = materias.find((m) => m.id === filtros.materiaId);
     etiquetas.push({

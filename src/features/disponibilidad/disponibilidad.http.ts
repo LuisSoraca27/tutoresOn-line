@@ -10,7 +10,7 @@ import type {
 
 export class DisponibilidadHttpRepo implements DisponibilidadRepo {
   obtener(tutorId: string) {
-    return pedir<Disponibilidad>(`/tutores/${tutorId}/disponibilidad`);
+    return pedir<Disponibilidad>(`/tutores/${encodeURIComponent(tutorId)}/disponibilidad`, { cache: "no-store" });
   }
 
   guardarBloques(tutorId: string, bloques: BloqueSemanal[]) {
@@ -36,6 +36,7 @@ export class DisponibilidadHttpRepo implements DisponibilidadRepo {
 
   turnos({ tutorId, desde, dias, duracionMinutos }: ConsultaTurnos) {
     return pedir<DiaConTurnos[]>(`/tutores/${tutorId}/turnos`, {
+      cache: "no-store",
       query: { desde, dias, duracion_minutos: duracionMinutos },
     });
   }

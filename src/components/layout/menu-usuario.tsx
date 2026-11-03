@@ -55,6 +55,7 @@ export function MenuUsuario() {
         className="flex items-center gap-2 rounded-full p-0.5 outline-none hover:bg-[var(--default-soft)] focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
       >
         <Avatar size="sm">
+          {usuario.avatarUrl ? <Avatar.Image src={usuario.avatarUrl} alt={`Foto de ${usuario.nombre}`} /> : null}
           <Avatar.Fallback>{iniciales(usuario.nombre)}</Avatar.Fallback>
         </Avatar>
         <span className="hidden text-sm sm:inline">{usuario.nombre.split(" ")[0]}</span>
@@ -63,6 +64,7 @@ export function MenuUsuario() {
       <Dropdown.Popover placement="bottom end" className="min-w-64">
         <div className="flex items-center gap-3 px-3 py-2.5">
           <Avatar size="md">
+            {usuario.avatarUrl ? <Avatar.Image src={usuario.avatarUrl} alt={`Foto de ${usuario.nombre}`} /> : null}
             <Avatar.Fallback>{iniciales(usuario.nombre)}</Avatar.Fallback>
           </Avatar>
           <div className="min-w-0">

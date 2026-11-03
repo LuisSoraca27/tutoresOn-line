@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { EditorMateriasTutor } from "@/components/tutor/editor-materias-tutor";
-import { catalogosRepo } from "@/features/catalogos";
-import { tutorActual } from "@/features/sesion/identidades";
-import { tutoresRepo } from "@/features/tutores";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import { exigirUsuario } from "@/features/auth/sesion";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 
 export const metadata: Metadata = { title: "Materias y tarifas" };
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Materias y tarifas" };
 export const dynamic = "force-dynamic";
 
 export default async function PaginaMaterias() {
-  const tutorId = await tutorActual();
+  const tutorId = (await exigirUsuario("tutor")).id;
 
   const [tutor, catalogo, niveles] = await Promise.all([
     tutoresRepo.obtener(tutorId),

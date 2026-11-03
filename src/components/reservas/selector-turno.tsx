@@ -11,14 +11,12 @@ import {
   ToggleButtonGroup,
 } from "@heroui/react";
 import {
-  getLocalTimeZone,
   today,
   type CalendarDate,
 } from "@internationalized/date";
-import { turnosParaReprogramar } from "@/features/reservas/acciones";
+import { turnosParaReprogramar } from "@/features/reservas/acciones-reales";
 import { consultarTurnos } from "@/features/disponibilidad/acciones";
 import type { DiaConTurnos, Turno } from "@/features/disponibilidad";
-import { aIsoFecha } from "@/features/disponibilidad/calcular-turnos";
 import { fechaLarga } from "@/lib/formato";
 
 /** Cuántos días hacia adelante se ofrecen. Dos meses cubren cualquier semestre. */
@@ -58,12 +56,12 @@ export function SelectorTurno({
         const resultado = reservaId
           ? await turnosParaReprogramar(
               reservaId,
-              aIsoFecha(new Date()),
+              today("America/Bogota").toString(),
               HORIZONTE_DIAS,
             )
           : await consultarTurnos({
               tutorId,
-              desde: aIsoFecha(new Date()),
+              desde: today("America/Bogota").toString(),
               dias: HORIZONTE_DIAS,
               duracionMinutos,
             });
@@ -151,7 +149,7 @@ export function SelectorTurno({
           setFecha(valor as CalendarDate | null);
           onElegir(null);
         }}
-        minValue={today(getLocalTimeZone())}
+        minValue={today("America/Bogota")}
         isDateUnavailable={(dia) => !conTurnos.has(dia.toString())}
         aria-label="Elegir el día de la sesión"
         className="shrink-0"

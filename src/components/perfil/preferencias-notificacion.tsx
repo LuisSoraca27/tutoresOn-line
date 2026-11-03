@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Alert, Button, Card, Checkbox, Table } from "@heroui/react";
 import { guardarPreferencias } from "@/features/preferencias/acciones";
-import { CANALES, EVENTOS, type Canal, type Preferencias } from "@/features/preferencias";
+import { CANALES, EVENTOS, type Canal, type Preferencias } from "@/features/preferencias/preferencias.types";
 
 /**
  * Preferencias por canal y por evento (F9.4).
@@ -52,8 +52,7 @@ export function PreferenciasNotificacion({
       <Card.Header>
         <Card.Title className="text-base">Cómo quiero enterarme</Card.Title>
         <Card.Description>
-          Los avisos dentro de la aplicación llegan siempre. Aquí eliges qué se te manda además
-          por fuera.
+          Guarda tus preferencias de aviso. Los envíos por correo, SMS y WhatsApp aún no están habilitados.
         </Card.Description>
       </Card.Header>
 
@@ -141,7 +140,7 @@ export function PreferenciasNotificacion({
                 {sinNingun.length === 1
                   ? `“${sinNingun[0].etiqueta}” no llegará por ningún canal externo.`
                   : `${sinNingun.length} eventos no llegarán por ningún canal externo.`}{" "}
-                Los seguirás viendo en la campana.
+                Los avisos de la campana aún no están habilitados.
               </Alert.Description>
             </Alert.Content>
           </Alert>
@@ -162,7 +161,7 @@ export function PreferenciasNotificacion({
         </Button>
 
         <p className="text-xs text-[var(--muted)]">
-          El envío real por SMS y WhatsApp lo hace el backend; aquí se define qué mandar.
+          Guardar estas opciones no activa todavía el envío de notificaciones.
         </p>
       </Card.Footer>
     </Card>

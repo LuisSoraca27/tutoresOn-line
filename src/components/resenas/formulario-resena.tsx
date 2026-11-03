@@ -12,7 +12,7 @@ import {
   TextField,
 } from "@heroui/react";
 import { SelectorEstrellas } from "@/components/resenas/selector-estrellas";
-import { publicarResena } from "@/features/resenas/acciones";
+import { publicarResena } from "@/features/resenas/acciones-reales";
 import { CRITERIOS } from "@/features/resenas";
 
 const MINIMO = 10;

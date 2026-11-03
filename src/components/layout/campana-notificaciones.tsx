@@ -128,7 +128,7 @@ export function CampanaNotificaciones() {
                 >
                   <Link
                     href={aviso.enlace}
-                    onClick={() => setAbierto(false)}
+                    onClick={() => alAbrir(false)}
                     className="block px-4 py-3 hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--focus)] focus-visible:outline-none"
                   >
                     <span className="flex items-start gap-2">
@@ -156,7 +156,7 @@ export function CampanaNotificaciones() {
           <Separator />
 
           <div className="px-4 py-3">
-            <Button variant="ghost" size="sm" onPress={() => setAbierto(false)}>
+            <Button variant="ghost" size="sm" onPress={() => alAbrir(false)}>
               <Link href="/notificaciones">Ver todas</Link>
             </Button>
           </div>

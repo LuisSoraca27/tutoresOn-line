@@ -24,8 +24,8 @@ import {
 import { SelectorTurno } from "@/components/reservas/selector-turno";
 import type { Materia, Nivel, NivelId } from "@/features/catalogos";
 import type { Turno } from "@/features/disponibilidad";
-import { crearReserva } from "@/features/reservas/acciones";
-import type { Reserva } from "@/features/reservas";
+import { crearReserva } from "@/features/reservas/acciones-reales";
+import type { ReservaReal } from "@/features/reservas/reales";
 import type { Tutor } from "@/features/tutores";
 import { fechaLarga, precio } from "@/lib/formato";
 
@@ -73,7 +73,7 @@ export function AsistenteReserva({
   const [nota, setNota] = useState("");
 
   const [error, setError] = useState<string | null>(null);
-  const [confirmada, setConfirmada] = useState<Reserva | null>(null);
+  const [confirmada, setConfirmada] = useState<ReservaReal | null>(null);
   const [enviando, iniciar] = useTransition();
 
   // Solo las materias que el tutor dicta, con su nombre del catálogo.
@@ -144,7 +144,7 @@ export function AsistenteReserva({
         <Card.Header>
           <Card.Title className="titulo text-xl">Reserva enviada a {tutor.nombre}</Card.Title>
           <Card.Description>
-            Queda pendiente hasta que el tutor la acepte. Te avisamos apenas responda.
+            Queda pendiente hasta que el tutor la acepte. Puedes consultar su estado en Mis reservas.
           </Card.Description>
         </Card.Header>
 
@@ -157,14 +157,14 @@ export function AsistenteReserva({
             turno={{ inicio: confirmada.inicio, fin: confirmada.fin } as Turno}
             duracion={duracion}
             lugar={confirmada.lugar}
-            total={total}
+            total={confirmada.precio}
             codigo={confirmada.id}
           />
         </Card.Content>
 
         <Card.Footer className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-4">
           <Button variant="primary">
-            <Link href="/estudiante">Ir a mi panel</Link>
+            <Link href="/estudiante/reservas">Ver mis reservas</Link>
           </Button>
           <Button variant="ghost">
             <Link href="/buscar">Buscar otro tutor</Link>

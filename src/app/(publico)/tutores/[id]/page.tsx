@@ -1,15 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Avatar, Button, Card, Chip, Separator, Table, Tabs } from "@heroui/react";
-import { ListaResenas } from "@/components/resenas/lista-resenas";
 import { ResumenReputacion } from "@/components/tutores/resumen-reputacion";
+import { ListaResenasPublicas } from "@/components/resenas/lista-resenas-publicas";
+import { resenasDeTutor } from "@/features/resenas/reales";
 import { Estrellas } from "@/components/ui/estrellas";
 import { IconoMapa, IconoVerificado, IconoVideo } from "@/components/ui/iconos";
-import { catalogosRepo } from "@/features/catalogos";
-import { combinarReputacion, resenasRepo } from "@/features/resenas";
-import { motivosDeReporte } from "@/features/resenas/acciones";
-import { tutoresRepo, type Tutor } from "@/features/tutores";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
+import type { Tutor } from "@/features/tutores";
+import { tutoresPublicosRepo as tutoresRepo } from "@/features/tutores/publicos";
 import { precioHora } from "@/lib/formato";
 import { iniciales } from "@/lib/texto";
 
@@ -43,15 +42,12 @@ export default async function PerfilTutor({ params }: { params: Promise<{ id: st
     catalogosRepo.materias(),
     catalogosRepo.niveles(),
     catalogosRepo.ciudades(),
-    resenasRepo.deTutor(id),
+    resenasDeTutor(id),
   ]);
-
-  const motivosReporte = await motivosDeReporte();
 
   if (!tutor) notFound();
 
-  // El agregado histórico más lo que se ha escrito en la plataforma.
-  const reputacion = combinarReputacion(tutor.reputacion, resenas);
+  const reputacion = tutor.reputacion;
 
   const nombreMateria = new Map(materias.map((m) => [m.id, m.nombre]));
   const nombreNivel = new Map(niveles.map((n) => [n.id, n.nombre]));
@@ -204,7 +200,7 @@ export default async function PerfilTutor({ params }: { params: Promise<{ id: st
 
               <Separator className="my-7" />
 
-              <ListaResenas resenas={resenas} motivosReporte={motivosReporte} />
+              <ListaResenasPublicas resenas={resenas} />
             </Tabs.Panel>
           </Tabs>
         </div>
@@ -223,13 +219,8 @@ export default async function PerfilTutor({ params }: { params: Promise<{ id: st
             </Card.Header>
 
             <Card.Content className="flex flex-col gap-3">
-              <Button variant="primary">
-                <Link href={`/estudiante/reservar/${tutor.id}`}>Elegir horario</Link>
-              </Button>
-              <p className="text-xs text-[var(--muted)]">
-                Eliges materia, duración y turno. La reserva queda pendiente hasta que
-                {" "}{tutor.nombre.split(" ")[0]} la acepte.
-              </p>
+              <Button variant="primary"><Link href={`/estudiante/reservar/${tutor.id}`}>Elegir horario</Link></Button>
+              <p className="text-xs text-[var(--muted)]">La reserva queda pendiente hasta que el tutor la acepte.</p>
             </Card.Content>
           </Card>
         </aside>
@@ -237,3 +228,4 @@ export default async function PerfilTutor({ params }: { params: Promise<{ id: st
     </div>
   );
 }
+import Link from "next/link";

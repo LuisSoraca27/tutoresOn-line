@@ -1,94 +1,28 @@
 "use server";
-
 import { revalidatePath } from "next/cache";
-import { notificacionesRepo } from "@/features/notificaciones";
-import { tutoresRepo } from "@/features/tutores";
-import { nombreEstudiante } from "@/mocks/estudiantes";
-import { mensajesRepo } from "./index";
-import { usuarioActual } from "@/features/auth/sesion";
-import { reservasRepo } from "@/features/reservas";
-import type { ConversacionConMensajes } from "./mensajes.repo";
+import { tokenSesion, usuarioActual } from "@/features/auth/sesion";
+import { pedir } from "@/lib/http";
+import type { Mensaje } from "./mensaje.types";
 
-/** Abre un hilo y lo da por leído para quien lo abre. */
-export async function consultarHilo(
-  estudianteId: string,
-  tutorId: string,
-  lectorId: string,
-): Promise<ConversacionConMensajes> {
-  await comprobarParticipante(estudianteId, tutorId, lectorId);
-  const hilo = await mensajesRepo.hilo(estudianteId, tutorId);
-  await mensajesRepo.marcarLeidos(hilo.conversacion.id, lectorId);
+async function credenciales(estudianteId: string, tutorId: string, usuarioId: string) {
+  const usuario = await usuarioActual();
+  if (!usuario || usuario.id !== usuarioId || (usuario.rol === "estudiante" ? usuario.id !== estudianteId : usuario.id !== tutorId)) throw new Error("Tu sesión no permite acceder a esta conversación.");
+  const token = await tokenSesion();
+  if (!token) throw new Error("Tu sesión expiró. Vuelve a iniciar sesión.");
+  return { Authorization: `Bearer ${token}` };
+}
+export async function consultarHilo(estudianteId: string, tutorId: string, lectorId: string) {
+  const headers = await credenciales(estudianteId, tutorId, lectorId);
+  const hilo = await pedir<{ mensajes: Mensaje[] }>("/mensajes/hilo", { headers, query: { estudianteId, tutorId }, cache: "no-store" });
+  await pedir<void>("/mensajes/hilo/leer", { method: "POST", headers, body: { estudianteId, tutorId }, cache: "no-store" });
   return hilo;
 }
-
-export async function enviarMensaje(datos: {
-  estudianteId: string;
-  tutorId: string;
-  autorId: string;
-  texto: string;
-}): Promise<{ ok: boolean; mensaje?: string }> {
-  const texto = datos.texto.trim();
-
-  if (!texto) return { ok: false, mensaje: "Escribe algo antes de enviar." };
-  if (texto.length > 1000)
-    return { ok: false, mensaje: "El mensaje es demasiado largo." };
-
+export async function enviarMensaje(datos: { estudianteId: string; tutorId: string; autorId: string; texto: string }): Promise<{ ok: boolean; mensaje?: string }> {
   try {
-    await comprobarParticipante(
-      datos.estudianteId,
-      datos.tutorId,
-      datos.autorId,
-    );
-
-    await mensajesRepo.enviar({ ...datos, texto });
-
-    // El aviso va para la contraparte, nunca para quien escribió.
-    const esEstudiante = datos.autorId === datos.estudianteId;
-    const tutor = await tutoresRepo.obtener(datos.tutorId);
-    const remitente = esEstudiante
-      ? nombreEstudiante(datos.estudianteId)
-      : (tutor?.nombre ?? "tu tutor");
-
-    await notificacionesRepo.crear({
-      destinatarioId: esEstudiante ? datos.tutorId : datos.estudianteId,
-      tipo: "mensaje-nuevo",
-      titulo: `Mensaje de ${remitente}`,
-      detalle: texto.slice(0, 90),
-      enlace: esEstudiante ? "/tutor/mensajes" : "/estudiante/mensajes",
-    });
-
+    const headers = await credenciales(datos.estudianteId, datos.tutorId, datos.autorId);
+    await pedir("/mensajes", { method: "POST", headers, body: { estudianteId: datos.estudianteId, tutorId: datos.tutorId, texto: datos.texto }, cache: "no-store" });
     revalidatePath("/estudiante/mensajes");
     revalidatePath("/tutor/mensajes");
-    revalidatePath("/notificaciones");
-
     return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      mensaje:
-        error instanceof Error
-          ? error.message
-          : "No pudimos enviar el mensaje. Inténtalo de nuevo.",
-    };
-  }
-}
-
-async function comprobarParticipante(
-  estudianteId: string,
-  tutorId: string,
-  autorId: string,
-) {
-  const usuario = await usuarioActual();
-  if (
-    !usuario ||
-    usuario.id !== autorId ||
-    (usuario.rol === "estudiante"
-      ? usuario.id !== estudianteId
-      : usuario.id !== tutorId)
-  ) {
-    throw new Error("Tu sesión no permite acceder a esta conversación.");
-  }
-  const reservas = await reservasRepo.deEstudiante(estudianteId);
-  if (!reservas.some((reserva) => reserva.tutorId === tutorId))
-    throw new Error("Necesitas una reserva con este contacto para escribirle.");
+  } catch (error) { return { ok: false, mensaje: error instanceof Error ? error.message : "No pudimos enviar el mensaje." }; }
 }

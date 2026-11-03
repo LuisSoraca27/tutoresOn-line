@@ -31,14 +31,19 @@ export function ReglasAgendaFormulario({
   reglasIniciales: ReglasAgenda;
 }) {
   const [reglas, setReglas] = useState(reglasIniciales);
+  const [guardadas, setGuardadas] = useState(reglasIniciales);
   const [aviso, setAviso] = useState<{ ok: boolean; mensaje: string } | null>(null);
   const [guardando, iniciar] = useTransition();
 
-  const cambiado = JSON.stringify(reglas) !== JSON.stringify(reglasIniciales);
+  const cambiado = JSON.stringify(reglas) !== JSON.stringify(guardadas);
 
   function guardar() {
     iniciar(async () => {
       const resultado = await guardarReglas(tutorId, reglas);
+      if (resultado.ok && resultado.disponibilidad) {
+        setReglas(resultado.disponibilidad.reglas);
+        setGuardadas(resultado.disponibilidad.reglas);
+      }
       setAviso({ ok: resultado.ok, mensaje: resultado.mensaje ?? "" });
     });
   }
@@ -52,7 +57,7 @@ export function ReglasAgendaFormulario({
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="flex flex-col gap-6">
+      <Card.Content className="flex flex-col gap-6" inert={guardando}>
         <CheckboxGroup
           value={reglas.duraciones.map(String)}
           onChange={(valores) =>

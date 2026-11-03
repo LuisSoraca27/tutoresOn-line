@@ -6,7 +6,7 @@ import { FiltrosActivos } from "@/components/tutores/filtros-activos";
 import { PanelFiltros } from "@/components/tutores/panel-filtros";
 import { ResultadosBusqueda } from "@/components/tutores/resultados-busqueda";
 import { SelectorOrden } from "@/components/tutores/selector-orden";
-import { catalogosRepo } from "@/features/catalogos";
+import { catalogosPublicosRepo as catalogosRepo } from "@/features/catalogos/publicos";
 import { leerFiltros, type ParametrosBusqueda } from "@/features/tutores/filtros-url";
 
 export const metadata: Metadata = {

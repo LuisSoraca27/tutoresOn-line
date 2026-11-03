@@ -24,12 +24,14 @@ export function TarjetaTutor({
   materias,
   ciudad,
   favorito,
+  soloPerfil = false,
 }: {
   tutor: Tutor;
   materias: string[];
   ciudad?: string;
   /** Solo cuando hay un estudiante que pueda guardarlo (F2.16). */
   favorito?: { estudianteId: string; guardado: boolean };
+  soloPerfil?: boolean;
 }) {
   return (
     // `min-w-0`: dentro de una rejilla, la columna crece hasta el ancho mínimo
@@ -120,7 +122,7 @@ export function TarjetaTutor({
           <span className="font-medium tabular-nums">{precioHora(tutor.precioDesde)}</span>
         </span>
         <Button variant="primary" size="sm">
-          <Link href={`/estudiante/reservar/${tutor.id}`}>Reservar</Link>
+          <Link href={soloPerfil ? `/tutores/${tutor.id}` : `/estudiante/reservar/${tutor.id}`}>{soloPerfil ? "Ver perfil" : "Reservar"}</Link>
         </Button>
       </Card.Footer>
     </Card>

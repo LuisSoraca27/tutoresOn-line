@@ -4,11 +4,8 @@ import { EncabezadoPagina } from "@/components/layout/encabezado-pagina";
 import { AccionesSolicitud } from "@/components/reservas/acciones-solicitud";
 import { ChipEstado } from "@/components/reservas/chip-estado";
 import { IconoBandeja } from "@/components/ui/iconos";
-import { catalogosRepo } from "@/features/catalogos";
-import { reservasRepo } from "@/features/reservas";
-import { aVista, type ReservaVista } from "@/features/reservas/vista";
-import { tutorActual } from "@/features/sesion/identidades";
-import { tutoresRepo } from "@/features/tutores";
+import { exigirUsuario } from "@/features/auth/sesion";
+import { listarSolicitudes, type Solicitud } from "@/features/solicitudes/solicitudes";
 import { fechaLarga, precio } from "@/lib/formato";
 import { iniciales } from "@/lib/texto";
 
@@ -18,16 +15,10 @@ export const metadata: Metadata = { title: "Solicitudes" };
 export const dynamic = "force-dynamic";
 
 export default async function PaginaSolicitudes() {
-  const tutorId = await tutorActual();
-
-  const [reservas, tutores, materias, niveles] = await Promise.all([
-    reservasRepo.deTutor(tutorId),
-    tutoresRepo.buscar({ porPagina: 100 }).then((pagina) => pagina.items),
-    catalogosRepo.materias(),
-    catalogosRepo.niveles(),
-  ]);
-
-  const vistas = aVista(reservas, { tutores, materias, niveles });
+  await exigirUsuario("tutor");
+  const vistas = (await listarSolicitudes()).map((solicitud) => ({
+    ...solicitud, fecha: solicitud.inicio.slice(0, 10), horaInicio: solicitud.inicio.slice(11, 16), horaFin: solicitud.fin.slice(11, 16),
+  }));
   const pendientes = vistas
     .filter((reserva) => reserva.estado === "pendiente")
     .sort((a, b) => a.inicio.localeCompare(b.inicio));
@@ -41,7 +32,7 @@ export default async function PaginaSolicitudes() {
     <>
       <EncabezadoPagina
         titulo="Solicitudes"
-        descripcion="Cada una bloquea ese horario en tu agenda desde que llega, así que responder rápido libera turnos para otros estudiantes."
+        descripcion="Revisa las solicitudes de tus estudiantes y acepta o rechaza cada una."
       />
 
       {pendientes.length === 0 ? (
@@ -71,7 +62,7 @@ export default async function PaginaSolicitudes() {
 
       {respondidas.length > 0 ? (
         <section className="pt-10">
-          <h2 className="titulo text-xl">Respondidas recientemente</h2>
+          <h2 className="titulo text-xl">Solicitudes respondidas</h2>
 
           <div className="mt-4 flex flex-col rounded-xl border border-[var(--border)]">
             {respondidas.map((reserva, indice) => (
@@ -101,7 +92,7 @@ export default async function PaginaSolicitudes() {
   );
 }
 
-function TarjetaSolicitud({ reserva }: { reserva: ReservaVista }) {
+function TarjetaSolicitud({ reserva }: { reserva: Solicitud & { fecha: string; horaInicio: string; horaFin: string } }) {
   return (
     <Card>
       <Card.Header className="flex flex-row items-start gap-3">
@@ -144,7 +135,7 @@ function TarjetaSolicitud({ reserva }: { reserva: ReservaVista }) {
       </Card.Content>
 
       <Card.Footer className="border-t border-[var(--border)] pt-4">
-        <AccionesSolicitud reservaId={reserva.id} estudiante={reserva.estudianteNombre} />
+        <AccionesSolicitud reservaId={reserva.id} estudiante={reserva.estudianteNombre} inicio={reserva.inicio} />
       </Card.Footer>
     </Card>
   );

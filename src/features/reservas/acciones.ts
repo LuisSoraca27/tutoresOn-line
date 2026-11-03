@@ -1,5 +1,9 @@
 "use server";
 
+import { env } from "@/lib/env";
+import { NotificacionesMockRepo } from "@/features/notificaciones/notificaciones.mock";
+const notificacionesSimuladas = new NotificacionesMockRepo();
+
 import { revalidatePath } from "next/cache";
 import { usuarioActual } from "@/features/auth/sesion";
 import {
@@ -8,7 +12,6 @@ import {
 } from "@/features/disponibilidad/calcular-turnos";
 import { disponibilidadRepo } from "@/features/disponibilidad";
 import {
-  notificacionesRepo,
   type NuevaNotificacion,
 } from "@/features/notificaciones";
 import { nombreEstudiante } from "@/mocks/estudiantes";
@@ -83,7 +86,7 @@ export async function crearReserva(
   try {
     const reserva = await reservasRepo.crear(nueva);
 
-    await notificacionesRepo.crear({
+    if (env.usarDatosSimulados) await notificacionesSimuladas.crear({
       destinatarioId: reserva.tutorId,
       tipo: "reserva-nueva",
       titulo: "Nueva solicitud de tutoría",
@@ -205,7 +208,7 @@ async function avisar(reserva: Reserva, motivo?: string) {
   };
 
   const aviso = avisos[reserva.estado];
-  if (aviso) await notificacionesRepo.crear(aviso);
+  if (aviso && env.usarDatosSimulados) await notificacionesSimuladas.crear(aviso);
 }
 
 /** El tutor acepta la solicitud (F5.5). */
@@ -371,7 +374,7 @@ export async function reprogramarReserva(
       fin,
       reserva.inicio,
     );
-    await notificacionesRepo.crear({
+    if (env.usarDatosSimulados) await notificacionesSimuladas.crear({
       destinatarioId: reserva.tutorId,
       tipo: "reserva-reprogramada",
       titulo: "Solicitud de nuevo horario",

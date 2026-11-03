@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Alert, Button, Calendar, Card } from "@heroui/react";
-import { getLocalTimeZone, parseDate, today, type DateValue } from "@internationalized/date";
+import { parseDate, today, type DateValue } from "@internationalized/date";
 import { guardarExcepciones } from "@/features/disponibilidad/acciones";
 import type { Excepcion } from "@/features/disponibilidad";
 import { fechaLarga } from "@/lib/formato";
@@ -24,11 +24,11 @@ export function ExcepcionesCalendario({
   const [fechas, setFechas] = useState<string[]>(
     excepcionesIniciales.map((excepcion) => excepcion.fecha).sort(),
   );
+  const [guardadas, setGuardadas] = useState(() => excepcionesIniciales.map((excepcion) => excepcion.fecha).sort());
   const [aviso, setAviso] = useState<{ ok: boolean; mensaje: string } | null>(null);
   const [guardando, iniciar] = useTransition();
 
-  const iniciales = excepcionesIniciales.map((excepcion) => excepcion.fecha).sort();
-  const cambiado = JSON.stringify(fechas) !== JSON.stringify(iniciales);
+  const cambiado = JSON.stringify(fechas) !== JSON.stringify(guardadas);
 
   const seleccion = fechas.map((fecha) => parseDate(fecha));
 
@@ -44,6 +44,11 @@ export function ExcepcionesCalendario({
         tutorId,
         fechas.map((fecha) => ({ fecha })),
       );
+      if (resultado.ok && resultado.disponibilidad) {
+        const guardadasAhora = resultado.disponibilidad.excepciones.map((excepcion) => excepcion.fecha).sort();
+        setFechas(guardadasAhora);
+        setGuardadas(guardadasAhora);
+      }
       setAviso({ ok: resultado.ok, mensaje: resultado.mensaje ?? "" });
     });
   }
@@ -58,12 +63,12 @@ export function ExcepcionesCalendario({
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="flex flex-col gap-6 lg:flex-row">
+      <Card.Content className="flex flex-col gap-6 lg:flex-row" inert={guardando}>
         <Calendar
           selectionMode="multiple"
           value={seleccion}
           onChange={alCambiar}
-          minValue={today(getLocalTimeZone())}
+          minValue={today("America/Bogota")}
           aria-label="Días bloqueados"
           className="shrink-0"
         >

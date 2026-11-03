@@ -38,10 +38,11 @@ export function EditorMateriasTutor({
   niveles: Nivel[];
 }) {
   const [materias, setMaterias] = useState(materiasIniciales);
+  const [guardadas, setGuardadas] = useState(materiasIniciales);
   const [aviso, setAviso] = useState<{ ok: boolean; mensaje: string } | null>(null);
   const [guardando, iniciar] = useTransition();
 
-  const cambiado = JSON.stringify(materias) !== JSON.stringify(materiasIniciales);
+  const cambiado = JSON.stringify(materias) !== JSON.stringify(guardadas);
   const usadas = new Set(materias.map((materia) => materia.materiaId));
   const disponibles = catalogo.filter((materia) => !usadas.has(materia.id));
 
@@ -67,6 +68,7 @@ export function EditorMateriasTutor({
   function guardar() {
     iniciar(async () => {
       const resultado = await guardarMaterias(tutorId, materias);
+      if (resultado.ok) setGuardadas(materias);
       setAviso(
         resultado.ok
           ? { ok: true, mensaje: "Materias y tarifas guardadas." }
@@ -88,7 +90,7 @@ export function EditorMateriasTutor({
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="flex flex-col gap-1">
+      <Card.Content className="flex flex-col gap-1" inert={guardando}>
         {materias.length === 0 ? (
           <p className="py-4 text-sm text-[var(--muted)]">
             Agrega tu primera materia abajo.
@@ -198,7 +200,7 @@ export function EditorMateriasTutor({
         </Button>
 
         {cambiado && !guardando ? (
-          <Button variant="ghost" onPress={() => setMaterias(materiasIniciales)}>
+          <Button variant="ghost" onPress={() => { setMaterias(guardadas); setAviso(null); }}>
             Descartar
           </Button>
         ) : null}

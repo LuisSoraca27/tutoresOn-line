@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   Alert,
@@ -28,7 +28,8 @@ import {
   lanzarBusqueda,
   type EstadoBusqueda,
 } from "@/features/express/acciones";
-import { MINUTOS_VIGENCIA, SEGUNDOS_SONDEO } from "@/features/express";
+import { MINUTOS_VIGENCIA, type SolicitudExpress } from "@/features/express";
+import { useRealtimeExpress } from "@/features/express/usar-realtime";
 import { iniciales } from "@/lib/texto";
 
 const DURACIONES = [30, 60, 90];
@@ -37,18 +38,18 @@ const DURACIONES = [30, 60, 90];
  * Tutor al instante, lado del estudiante (F4.1 – F4.3, F4.6, F4.7).
  *
  * Tres estados: el formulario, la búsqueda en vivo y el emparejamiento.
- * Mientras busca, la pantalla pregunta al servidor cada pocos segundos y
- * muestra a quién se le está avisando, para que la espera no sea una caja
- * negra con una ruedita girando.
+ * Recibe avisos por WebSocket y consulta el estado autorizado de la búsqueda.
  */
 export function BuscadorExpress({
   estudianteId,
   materias,
   niveles,
+  solicitudInicial,
 }: {
   estudianteId: string;
   materias: Materia[];
   niveles: Nivel[];
+  solicitudInicial: SolicitudExpress | null;
 }) {
   const [materiaId, setMateriaId] = useState<string | null>(null);
   const [nivelId, setNivelId] = useState<NivelId | null>(null);
@@ -56,30 +57,36 @@ export function BuscadorExpress({
   const [duracion, setDuracion] = useState(60);
   const [nota, setNota] = useState("");
 
-  const [solicitudId, setSolicitudId] = useState<string | null>(null);
-  const [estado, setEstado] = useState<EstadoBusqueda | null>(null);
+  const [solicitudId, setSolicitudId] = useState<string | null>(solicitudInicial?.id ?? null);
+  const [estado, setEstado] = useState<EstadoBusqueda | null>(solicitudInicial ? { solicitud: solicitudInicial, candidatos: [], tutor: null } : null);
   const [error, setError] = useState<string | null>(null);
   const [enviando, iniciar] = useTransition();
+  const idVigente = useRef(solicitudInicial?.id ?? null);
+  const secuencia = useRef(0);
 
-  // Sondeo mientras la búsqueda sigue viva.
+  async function sincronizar() {
+    if (!solicitudId) return;
+    const id = solicitudId;
+    const numero = ++secuencia.current;
+    try {
+      const nuevo = await consultarBusqueda(id);
+      if (idVigente.current === id && secuencia.current === numero) { setEstado(nuevo); setError(null); }
+    } catch (fallo) {
+      if (idVigente.current === id && secuencia.current === numero) setError(fallo instanceof Error ? fallo.message : "No pudimos actualizar la búsqueda.");
+    }
+  }
+  const conectado = useRealtimeExpress(Boolean(solicitudId && estado?.solicitud?.estado === "buscando"), false, sincronizar);
   useEffect(() => {
     if (!solicitudId) return;
-
-    let activo = true;
-
-    async function preguntar() {
-      const nuevo = await consultarBusqueda(solicitudId!);
-      if (activo) setEstado(nuevo);
-    }
-
-    preguntar();
-    const reloj = setInterval(preguntar, SEGUNDOS_SONDEO * 1000);
-
-    return () => {
-      activo = false;
-      clearInterval(reloj);
-    };
-  }, [solicitudId]);
+    const creada = estado?.solicitud?.creadaEn;
+    if (!creada || estado?.solicitud?.estado !== "buscando") return;
+    const espera = Math.max(0, new Date(creada).getTime() + MINUTOS_VIGENCIA * 60000 - Date.now() + 250);
+    const reloj = setTimeout(() => {
+      const numero = ++secuencia.current;
+      void consultarBusqueda(solicitudId).then((nuevo) => { if (idVigente.current === solicitudId && secuencia.current === numero) setEstado(nuevo); }).catch(() => { if (idVigente.current === solicitudId && secuencia.current === numero) setError("No pudimos actualizar la búsqueda."); });
+    }, espera);
+    return () => clearTimeout(reloj);
+  }, [solicitudId, estado?.solicitud?.creadaEn, estado?.solicitud?.estado]);
 
   function lanzar() {
     if (!materiaId || !nivelId) return;
@@ -95,7 +102,7 @@ export function BuscadorExpress({
         nota: nota.trim() || undefined,
       });
 
-      if (resultado.ok) setSolicitudId(resultado.solicitud.id);
+      if (resultado.ok) { idVigente.current = resultado.solicitud.id; setEstado({ solicitud: resultado.solicitud, candidatos: [], tutor: null }); setSolicitudId(resultado.solicitud.id); }
       else setError(resultado.mensaje);
     });
   }
@@ -103,9 +110,9 @@ export function BuscadorExpress({
   function cancelar() {
     if (!solicitudId) return;
     iniciar(async () => {
-      await cancelarBusqueda(solicitudId);
-      setSolicitudId(null);
-      setEstado(null);
+      const resultado = await cancelarBusqueda(solicitudId);
+      if (resultado.ok) { idVigente.current = null; secuencia.current++; setSolicitudId(null); setEstado(null); }
+      else { setError(resultado.mensaje); await sincronizar(); }
     });
   }
 
@@ -129,16 +136,15 @@ export function BuscadorExpress({
 
         <Card.Content>
           <p className="text-sm">
-            La sesión empieza en unos minutos. Entra a la sala cuando quieras y prueba cámara y
-            micrófono.
+            La reserva quedó confirmada para empezar en unos minutos. Consulta los detalles en tus reservas.
           </p>
         </Card.Content>
 
         <Card.Footer className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-4">
           <Button variant="primary">
-            <Link href={`/sesion/${estado.solicitud.reservaId}`}>Ir a la sala</Link>
+            <Link href="/estudiante/reservas">Ver mi reserva</Link>
           </Button>
-          <Button variant="ghost" onPress={() => { setSolicitudId(null); setEstado(null); }}>
+          <Button variant="ghost" onPress={() => { idVigente.current = null; secuencia.current++; setSolicitudId(null); setEstado(null); }}>
             Buscar otra
           </Button>
         </Card.Footer>
@@ -157,6 +163,7 @@ export function BuscadorExpress({
           </div>
 
           <h2 className="titulo pt-4 text-xl">Buscando un tutor disponible</h2>
+          {!conectado ? <p className="pt-2 text-sm text-[var(--muted)]">Reconectando para recibir actualizaciones…</p> : null}
           <p className="mx-auto max-w-[46ch] pt-2 text-sm text-[var(--muted)]">
             {estado.candidatos.length === 0
               ? "Ahora mismo no hay tutores conectados para esa materia. Seguimos intentando durante unos minutos."
@@ -185,6 +192,7 @@ export function BuscadorExpress({
               La búsqueda se cierra sola a los {MINUTOS_VIGENCIA} minutos.
             </p>
           </div>
+          {error ? <p className="pt-3 text-sm text-[var(--danger)]" role="alert">{error}</p> : null}
         </Card.Content>
 
         <Card.Footer className="justify-center border-t border-[var(--border)] pt-4">
@@ -212,7 +220,7 @@ export function BuscadorExpress({
           </Alert.Description>
         </Alert.Content>
         <div className="flex flex-wrap gap-2 pt-3">
-          <Button variant="primary" size="sm" onPress={() => { setSolicitudId(null); setEstado(null); }}>
+          <Button variant="primary" size="sm" onPress={() => { idVigente.current = null; secuencia.current++; setSolicitudId(null); setEstado(null); }}>
             Intentar de nuevo
           </Button>
           <Button variant="ghost" size="sm">
@@ -292,7 +300,7 @@ export function BuscadorExpress({
               Virtual, empezamos ya
             </Radio.Content>
           </Radio>
-          <Radio value="presencial">
+          <Radio value="presencial" isDisabled>
             <Radio.Content>
               <Radio.Control>
                 <Radio.Indicator />
@@ -301,6 +309,7 @@ export function BuscadorExpress({
             </Radio.Content>
           </Radio>
         </RadioGroup>
+        <p className="text-xs text-[var(--muted)]">Por ahora las solicitudes inmediatas están disponibles para clases virtuales.</p>
 
         <div>
           <p className="pb-2 text-sm font-medium">Cuánto tiempo</p>

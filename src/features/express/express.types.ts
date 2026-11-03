@@ -7,9 +7,7 @@ import type { NivelId } from "@/features/catalogos/catalogo.types";
  * tutores conectados la ven durante un rato, el primero que la toma se la
  * queda y el resto la pierde.
  *
- * En esta entrega el navegador pregunta cada pocos segundos. El tiempo real
- * de verdad son WebSockets en FastAPI: cambia el transporte, no la pantalla
- * ni estos tipos.
+ * Los cambios se avisan por WebSocket y el estado se consulta en la API.
  */
 export type EstadoSolicitud = "buscando" | "emparejada" | "cancelada" | "expirada";
 

@@ -105,12 +105,12 @@ export function BandejaMensajes({
         });
 
         if (resultado.ok) {
-          const hilo = await consultarHilo(
-            activo.estudianteId,
-            activo.tutorId,
-            usuarioId,
-          );
-          setMensajes(hilo.mensajes);
+          try {
+            const hilo = await consultarHilo(activo.estudianteId, activo.tutorId, usuarioId);
+            setMensajes(hilo.mensajes);
+          } catch {
+            setError("El mensaje se envió, pero no pudimos actualizar la conversación. Se intentará de nuevo.");
+          }
         } else {
           setError(resultado.mensaje ?? "No pudimos enviar el mensaje.");
           setTexto(borrador);

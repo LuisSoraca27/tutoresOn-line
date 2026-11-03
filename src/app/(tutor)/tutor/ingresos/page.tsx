@@ -6,15 +6,9 @@ import {
   DescargarComprobante,
   DescargarIngresos,
 } from "@/components/ingresos/descargar-ingresos";
-import { PanelRetiros } from "@/components/ingresos/panel-retiros";
-import { ingresosRepo } from "@/features/ingresos";
-import { env } from "@/lib/env";
 import { IconoDinero } from "@/components/ui/iconos";
-import { catalogosRepo } from "@/features/catalogos";
-import { reservasRepo } from "@/features/reservas";
-import { aVista, type ReservaVista } from "@/features/reservas/vista";
-import { tutorActual } from "@/features/sesion/identidades";
-import { tutoresRepo } from "@/features/tutores";
+import { exigirUsuario } from "@/features/auth/sesion";
+import { consultarSesiones, type SesionLiquidable } from "@/features/ingresos/reales";
 import { fechaLarga, precio } from "@/lib/formato";
 
 export const metadata: Metadata = { title: "Ingresos" };
@@ -44,7 +38,7 @@ export default async function PaginaIngresos({
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
-  const tutorId = await tutorActual();
+  await exigirUsuario("tutor");
   const filtros = await searchParams;
   const desde = esFecha(filtros.desde) ? filtros.desde : undefined;
   const hasta = esFecha(filtros.hasta) ? filtros.hasta : undefined;
@@ -54,49 +48,27 @@ export default async function PaginaIngresos({
     (desde && hasta && desde > hasta),
   );
 
-  const [reservas, tutores, materias, niveles, balance, retiros] =
-    await Promise.all([
-      reservasRepo.deTutor(tutorId),
-      tutoresRepo.buscar({ porPagina: 100 }).then((pagina) => pagina.items),
-      catalogosRepo.materias(),
-      catalogosRepo.niveles(),
-      ingresosRepo.balance(tutorId),
-      ingresosRepo.retiros(tutorId),
-    ]);
-
-  // Solo cuenta lo finalizado: una sesión aceptada todavía puede caerse.
-  const cobradas = aVista(reservas, { tutores, materias, niveles })
-    .filter(
-      (reserva) =>
-        reserva.estado === "finalizada" && reserva.cierre?.asistio !== false,
-    )
-    .filter(
-      (reserva) =>
-        !rangoInvalido &&
-        (!desde || reserva.fecha >= desde) &&
-        (!hasta || reserva.fecha <= hasta),
-    )
-    .sort((a, b) => b.inicio.localeCompare(a.inicio));
+  const cobradas = rangoInvalido ? [] : await consultarSesiones(desde, hasta);
 
   const total = cobradas.reduce((suma, reserva) => suma + reserva.precio, 0);
   const horas =
     cobradas.reduce(
       (suma, reserva) =>
-        suma + (reserva.cierre?.duracionReal ?? reserva.duracionMinutos),
+        suma + reserva.duracionMinutos,
       0,
     ) / 60;
 
   const porHora = horas > 0 ? Math.round(total / horas) : 0;
 
   // Agrupado por mes: es el periodo con el que la gente piensa sus ingresos.
-  const meses = new Map<string, ReservaVista[]>();
+  const meses = new Map<string, SesionLiquidable[]>();
   for (const reserva of cobradas) {
     const clave = reserva.fecha.slice(0, 7);
     meses.set(clave, [...(meses.get(clave) ?? []), reserva]);
   }
 
   const indicadores = [
-    { etiqueta: "Total cobrado", valor: precio(total) },
+    { etiqueta: "Valor de sesiones", valor: precio(total) },
     { etiqueta: "Sesiones", valor: String(cobradas.length) },
     {
       etiqueta: "Horas dictadas",
@@ -109,7 +81,7 @@ export default async function PaginaIngresos({
     <>
       <EncabezadoPagina
         titulo="Ingresos"
-        descripcion="Solo cuenta lo que ya se dictó y se cerró: una sesión aceptada todavía se puede caer."
+        descripcion="Valor registrado de las sesiones finalizadas con asistencia. Este valor no confirma que se haya recibido un pago."
       />
 
       <form method="get" className="mb-6 flex flex-wrap items-end gap-4">
@@ -159,11 +131,11 @@ export default async function PaginaIngresos({
           <IconoDinero className="mx-auto size-8 text-[var(--muted)]" />
           <h2 className="titulo pt-3 text-lg">
             {desde || hasta
-              ? "Sin ingresos en este periodo"
-              : "Todavía no has cobrado nada"}
+              ? "Sin sesiones finalizadas en este periodo"
+              : "Todavía no tienes sesiones finalizadas"}
           </h2>
           <p className="mx-auto max-w-[46ch] pt-1.5 text-sm text-[var(--muted)]">
-            Los ingresos aparecen aquí cuando cierras una sesión desde su sala.
+            Aquí aparecerán las sesiones finalizadas con asistencia registrada.
           </p>
         </EmptyState>
       ) : (
@@ -220,14 +192,14 @@ export default async function PaginaIngresos({
                   <Table className="hidden md:block">
                     <Table.ScrollContainer>
                       <Table.Content
-                        aria-label={`Sesiones cobradas en ${nombreMes(clave)}`}
+                        aria-label={`Sesiones finalizadas en ${nombreMes(clave)}`}
                       >
                         <Table.Header>
                           <Table.Column isRowHeader>Fecha</Table.Column>
                           <Table.Column>Estudiante</Table.Column>
                           <Table.Column>Materia</Table.Column>
                           <Table.Column>Valor</Table.Column>
-                          <Table.Column>Comprobante</Table.Column>
+                          <Table.Column>Registro</Table.Column>
                         </Table.Header>
 
                         <Table.Body>
@@ -259,11 +231,7 @@ export default async function PaginaIngresos({
         </>
       )}
 
-      <PanelRetiros
-        balance={balance}
-        retiros={retiros}
-        simulado={env.usarDatosSimulados}
-      />
+      <Card className="mt-10"><Card.Header><Card.Title className="text-base">Retiros</Card.Title><Card.Description>Los retiros aún no están disponibles. La aplicación todavía no registra pagos ni transfiere dinero.</Card.Description></Card.Header></Card>
     </>
   );
 }

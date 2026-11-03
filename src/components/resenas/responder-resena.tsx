@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Alert, Button, Label, TextArea, TextField } from "@heroui/react";
-import { responderResena } from "@/features/resenas/acciones";
+import { responderResena } from "@/features/resenas/acciones-reales";
 
 /**
  * Respuesta pública del tutor a una reseña (F8.6).

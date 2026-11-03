@@ -1,12 +1,15 @@
 import { pedir } from "@/lib/http";
+import { env } from "@/lib/env";
 import type { FiltrosTutor, Pagina, Tutor } from "./tutor.types";
 import type { CambiosPerfil, TutoresRepo } from "./tutores.repo";
 
 export class TutoresHttpRepo implements TutoresRepo {
-  buscar(filtros: FiltrosTutor) {
-    return pedir<Pagina<Tutor>>("/tutores", {
+  async buscar(filtros: FiltrosTutor) {
+    const pagina = await pedir<Pagina<Tutor>>("/tutores", {
+      cache: "no-store",
       query: {
         q: filtros.q,
+        area: filtros.area,
         materia_id: filtros.materiaId,
         nivel_id: filtros.nivelId,
         modalidad: filtros.modalidad,
@@ -19,17 +22,24 @@ export class TutoresHttpRepo implements TutoresRepo {
         por_pagina: filtros.porPagina,
       },
     });
+    return { ...pagina, items: pagina.items.map(normalizarFoto) };
   }
 
-  obtener(id: string) {
-    return pedir<Tutor | null>(`/tutores/${id}`);
+  async obtener(id: string) {
+    const tutor = await pedir<Tutor | null>(`/tutores/${encodeURIComponent(id)}`, { cache: "no-store" });
+    return tutor ? normalizarFoto(tutor) : null;
   }
 
-  destacados(limite = 6) {
-    return pedir<Tutor[]>("/tutores/destacados", { query: { limite } });
+  async destacados(limite = 6) {
+    const tutores = await pedir<Tutor[]>("/tutores/destacados", { query: { limite }, cache: "no-store" });
+    return tutores.map(normalizarFoto);
   }
 
   actualizar(id: string, cambios: CambiosPerfil) {
     return pedir<Tutor>(`/tutores/${id}`, { method: "PATCH", body: cambios });
   }
+}
+
+function normalizarFoto(tutor: Tutor): Tutor {
+  return tutor.avatarUrl?.startsWith("/api/v1/tutores/") ? { ...tutor, avatarUrl: new URL(tutor.avatarUrl, env.apiUrl).toString() } : tutor;
 }
